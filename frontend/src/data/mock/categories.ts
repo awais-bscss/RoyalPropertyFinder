@@ -1,0 +1,77 @@
+import {
+  Building2,
+  MapPin,
+  Store,
+  Home,
+  LayoutGrid,
+  TrendingUp,
+} from "lucide-react";
+
+export const CATEGORIES = [
+  {
+    label: "Flats",
+    icon: Building2,
+    count: 483,
+    color: "#F97316",
+    bg: "#FFF7ED",
+  },
+  { label: "Plots", icon: MapPin, count: 423, color: "#6366F1", bg: "#EEF2FF" },
+  { label: "Shops", icon: Store, count: 322, color: "#0EA5E9", bg: "#F0F9FF" },
+  { label: "Houses", icon: Home, count: 163, color: "#10B981", bg: "#ECFDF5" },
+  {
+    label: "Commercial Plots",
+    icon: LayoutGrid,
+    count: 147,
+    color: "#8B5CF6",
+    bg: "#F5F3FF",
+  },
+  {
+    label: "Offices",
+    icon: TrendingUp,
+    count: 107,
+    color: "#3B82F6",
+    bg: "#EFF6FF",
+  },
+  {
+    label: "Penthouse",
+    icon: Building2,
+    count: 35,
+    color: "#EC4899",
+    bg: "#FDF2F8",
+  },
+  {
+    label: "Farm Houses",
+    icon: Home,
+    count: 19,
+    color: "#22C55E",
+    bg: "#F0FDF4",
+  },
+  {
+    label: "Buildings",
+    icon: Building2,
+    count: 10,
+    color: "#F59E0B",
+    bg: "#FFFBEB",
+  },
+  {
+    label: "Warehouses",
+    icon: Store,
+    count: 2,
+    color: "#64748B",
+    bg: "#F8FAFC",
+  },
+  {
+    label: "Industrial Land",
+    icon: MapPin,
+    count: 2,
+    color: "#DC2626",
+    bg: "#FEF2F2",
+  },
+  {
+    label: "Agricultural Land",
+    icon: MapPin,
+    count: 1,
+    color: "#16A34A",
+    bg: "#F0FDF4",
+  },
+];

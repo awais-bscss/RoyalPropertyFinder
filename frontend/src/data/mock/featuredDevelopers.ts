@@ -1,0 +1,42 @@
+export const FEATURED_DEVELOPERS_DATA = [
+  {
+    id: 1,
+    name: "Valencia Real Estate",
+    location: "Multan",
+    phone1: "+9261111333333",
+    phone2: "+923000605032",
+    logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=200&fit=crop",
+  },
+  {
+    id: 2,
+    name: "River Garden Dev...",
+    location: "Gujrat",
+    phone1: "+9242111333333",
+    phone2: "+923000605032",
+    logo: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=200&h=200&fit=crop",
+  },
+  {
+    id: 3,
+    name: "Octa Group",
+    location: "Peshawar",
+    phone1: "+923300119995",
+    phone2: "+923300119995",
+    logo: "https://images.unsplash.com/photo-1620288627223-53302f4e8c74?w=200&h=200&fit=crop",
+  },
+  {
+    id: 4,
+    name: "Mukhtar Group",
+    location: "Lahore",
+    phone1: "+9242111333333",
+    phone2: "+923000605032",
+    logo: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=200&h=200&fit=crop",
+  },
+  {
+    id: 5,
+    name: "Zameen Developments",
+    location: "Islamabad",
+    phone1: "+9251111333333",
+    phone2: "+923000605032",
+    logo: "https://images.unsplash.com/photo-1560415755-bd80d06eda60?w=200&h=200&fit=crop",
+  },
+];
