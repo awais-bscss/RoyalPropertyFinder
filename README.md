@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/logo.png" alt="Royal Property Finder Logo" width="120" />
+<img src="frontend/src/assets/Logo2.png" alt="Royal Property Finder Logo" width="120" />
 
 # 🏰 Royal Property Finder
 
@@ -25,6 +25,7 @@ _Find, list, and manage properties with confidence._
 
 ---
 
+<!--
 ## 📸 Screenshots
 
 > _Post listings, manage your properties, and track orders — all in one dashboard._
@@ -33,6 +34,7 @@ _Find, list, and manage properties with confidence._
   <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="49%" />
   <img src="docs/screenshots/listings.png" alt="Listings" width="49%" />
 </div>
+-->
 
 ---
 
