@@ -37,3 +37,6 @@ jspm_packages/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+# ── Project Specific ───────────────────────────────────────────────────────
+docs/
