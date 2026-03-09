@@ -3,45 +3,38 @@
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { featuredProjectsData } from "@/data/mock/featuredProjects";
-import { Search, X, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
-import { useState, useMemo } from "react";
+import { featuredProjectsData as mockData } from "@/data/mock/featuredProjects";
+import {
+  Search,
+  X,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import bgImage from "@/assets/bg-new-projects-sm.webp";
-import { FilterSelect } from "@/components/new-projects/FilterSelect";
-import { BrowseCategories } from "@/components/new-projects/BrowseCategories";
-import { DiscoverProjects } from "@/components/new-projects/DiscoverProjects";
-import { BrowseByCity } from "@/components/new-projects/BrowseByCity";
-import { FeaturedListings } from "@/components/new-projects/FeaturedListings";
-import { FeaturedDevelopers } from "@/components/new-projects/FeaturedDevelopers";
+import { FilterSelect } from "@/components/features/new-projects/FilterSelect";
+import { BrowseCategories } from "@/components/features/new-projects/BrowseCategories";
+import { DiscoverProjects } from "@/components/features/new-projects/DiscoverProjects";
+import { BrowseByCity } from "@/components/features/new-projects/BrowseByCity";
+import { FeaturedListings } from "@/components/features/new-projects/FeaturedListings";
+import { FeaturedDevelopers } from "@/components/features/new-projects/FeaturedDevelopers";
+import { PropertyTypeDropdown } from "@/components/features/home/hero/components/PropertyTypeDropdown";
+import { PriceDropdown } from "@/components/features/home/hero/components/PriceDropdown";
+import { AreaDropdown } from "@/components/features/home/hero/components/AreaDropdown";
+import apiClient from "@/lib/axios";
 
-// ─── Cities & Types (derived from data) ──────────────────────────────────────
-const ALL_CITIES = Array.from(
-  new Set(featuredProjectsData.map((p) => p.location.split(",")[0].trim())),
-).sort();
+function formatPKR(price: number) {
+  if (price >= 10000000) return `${(price / 10000000).toFixed(2)} Crore`;
+  if (price >= 100000) return `${(price / 100000).toFixed(2)} Lakh`;
+  return price.toLocaleString();
+}
 
-const ALL_TYPES = Array.from(
-  new Set(featuredProjectsData.flatMap((p) => p.types)),
-).sort();
-
-const BUDGET_OPTIONS = [
-  { label: "0 – Any", value: "any" },
-  { label: "Up to 1 Crore", value: "1cr" },
-  { label: "1 – 5 Crore", value: "1-5cr" },
-  { label: "5 – 20 Crore", value: "5-20cr" },
-  { label: "20+ Crore", value: "20cr+" },
-];
-
-const AREA_OPTIONS = [
-  { label: "0 – Any", value: "any" },
-  { label: "Up to 500 sqft", value: "500" },
-  { label: "500 – 2000 sqft", value: "500-2000" },
-  { label: "2000 – 5000 sqft", value: "2000-5000" },
-  { label: "5000+ sqft", value: "5000+" },
-];
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function NewProjectsPage() {
+  const [projectsData, setProjectsData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [city, setCity] = useState("any");
   const [propType, setPropType] = useState("any");
   const [budget, setBudget] = useState("any");
@@ -51,6 +44,70 @@ export default function NewProjectsPage() {
   const [showMore, setShowMore] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  useEffect(() => {
+    async function fetchAll() {
+      try {
+        const response: any = await apiClient.get(
+          "/listings?isRoyalProject=true",
+        );
+        const realProjects = (response?.data || []).map((p: any) => ({
+          id: p._id,
+          title: p.title,
+          priceRange: `${p.currency} ${formatPKR(p.price)}`,
+          location: `${p.city}, ${p.location}`,
+          types: [p.subtype],
+          areaRange: `${p.areaSize} ${p.areaUnit}`,
+          isHot: true,
+          image:
+            p.images?.[0] ||
+            "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
+        }));
+
+        const combined = [...realProjects];
+        mockData.forEach((m) => {
+          if (!combined.find((p) => p.title === m.title)) {
+            combined.push({ ...m, id: `mock-${m.id}` });
+          }
+        });
+        setProjectsData(combined);
+      } catch (error) {
+        setProjectsData(mockData.map((m) => ({ ...m, id: `mock-${m.id}` })));
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAll();
+  }, []);
+
+  const ALL_CITIES = useMemo(
+    () =>
+      Array.from(
+        new Set(projectsData.map((p) => p.location.split(",")[0].trim())),
+      ).sort(),
+    [projectsData],
+  );
+
+  const ALL_TYPES = useMemo(
+    () => Array.from(new Set(projectsData.flatMap((p) => p.types))).sort(),
+    [projectsData],
+  );
+
+  const BUDGET_OPTIONS = [
+    { label: "0 – Any", value: "any" },
+    { label: "Up to 1 Crore", value: "1cr" },
+    { label: "1 – 5 Crore", value: "1-5cr" },
+    { label: "5 – 20 Crore", value: "5-20cr" },
+    { label: "20+ Crore", value: "20cr+" },
+  ];
+
+  const AREA_OPTIONS = [
+    { label: "0 – Any", value: "any" },
+    { label: "Up to 500 sqft", value: "500" },
+    { label: "500 – 2000 sqft", value: "500-2000" },
+    { label: "2000 – 5000 sqft", value: "2000-5000" },
+    { label: "5000+ sqft", value: "5000+" },
+  ];
 
   const cityOptions = [
     { label: "All Cities", value: "any" },
@@ -62,9 +119,11 @@ export default function NewProjectsPage() {
   ];
 
   const filteredProjects = useMemo(() => {
-    if (!searched && !activeCategory) return featuredProjectsData;
-    return featuredProjectsData.filter((project) => {
-      const matchCity = city === "any" || project.location.startsWith(city);
+    if (!searched && !activeCategory) return projectsData;
+    return projectsData.filter((project) => {
+      const matchCity =
+        city === "any" ||
+        project.location.toLowerCase().startsWith(city.toLowerCase());
       const matchType = propType === "any" || project.types.includes(propType);
       const matchTitle =
         !projectTitle ||
@@ -73,7 +132,7 @@ export default function NewProjectsPage() {
         !activeCategory || project.types.includes(activeCategory);
       return matchCity && matchType && matchTitle && matchCategory;
     });
-  }, [searched, city, propType, projectTitle, activeCategory]);
+  }, [searched, city, propType, projectTitle, activeCategory, projectsData]);
 
   function handleSearch() {
     setSearched(true);
@@ -143,29 +202,30 @@ export default function NewProjectsPage() {
               placeholder="All Cities"
             />
             <div className="hidden md:block w-px h-10 bg-slate-200 self-end" />
-            <FilterSelect
-              label="Property Type"
-              value={propType}
-              onChange={setPropType}
-              options={typeOptions}
-              placeholder="All"
-            />
+            <div className="relative flex-1 min-w-[140px]">
+              <PropertyTypeDropdown
+                initialType={propType}
+                onTypeChange={(type) => setPropType(type)}
+                className="w-full flex-none"
+                variant="filter"
+              />
+            </div>
             <div className="hidden md:block w-px h-10 bg-slate-200 self-end" />
-            <FilterSelect
-              label="Budget Range"
-              value={budget}
-              onChange={setBudget}
-              options={BUDGET_OPTIONS}
-              placeholder="0 – Any"
-            />
+            <div className="relative flex-1 min-w-[140px]">
+              <PriceDropdown
+                onPriceChange={(min, max) => setBudget(`${min}-${max}`)}
+                className="w-full flex-none"
+                variant="filter"
+              />
+            </div>
             <div className="hidden md:block w-px h-10 bg-slate-200 self-end" />
-            <FilterSelect
-              label="Area Range"
-              value={area}
-              onChange={setArea}
-              options={AREA_OPTIONS}
-              placeholder="0 – Any"
-            />
+            <div className="relative flex-1 min-w-[140px]">
+              <AreaDropdown
+                onAreaChange={(min, max) => setArea(`${min}-${max}`)}
+                className="w-full flex-none"
+                variant="filter"
+              />
+            </div>
 
             {/* Search button + See More/Less — stacked right */}
             <div className="flex flex-col items-end gap-1 ml-auto shrink-0">
@@ -246,51 +306,6 @@ export default function NewProjectsPage() {
               </div>
             </div>
           </div>
-
-          {/* Active filters clear */}
-          {(city !== "any" ||
-            propType !== "any" ||
-            budget !== "any" ||
-            area !== "any" ||
-            projectTitle ||
-            activeCategory) && (
-            <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-500">Active filters:</span>
-              {city !== "any" && (
-                <span className="bg-royal-50 text-royal-800 text-xs font-medium px-2.5 py-1 rounded-full border border-royal-200 flex items-center gap-1">
-                  {city}{" "}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => setCity("any")}
-                  />
-                </span>
-              )}
-              {propType !== "any" && (
-                <span className="bg-royal-50 text-royal-800 text-xs font-medium px-2.5 py-1 rounded-full border border-royal-200 flex items-center gap-1">
-                  {propType}{" "}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => setPropType("any")}
-                  />
-                </span>
-              )}
-              {activeCategory && (
-                <span className="bg-royal-50 text-royal-800 text-xs font-medium px-2.5 py-1 rounded-full border border-royal-200 flex items-center gap-1">
-                  {activeCategory}{" "}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
-                    onClick={() => setActiveCategory(null)}
-                  />
-                </span>
-              )}
-              <button
-                onClick={clearFilters}
-                className="text-xs text-red-500 font-semibold hover:underline ml-1"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

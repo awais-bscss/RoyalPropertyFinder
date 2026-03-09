@@ -78,7 +78,14 @@ export const createListing = catchAsync(async (req: Request, res: Response) => {
  * @access  Public
  */
 export const getAllListings = catchAsync(async (req: Request, res: Response) => {
-  const listings = await Listing.find({ isActive: true })
+  const { isRoyalProject } = req.query;
+  const filter: any = { isActive: true, status: "approved" };
+
+  if (isRoyalProject === "true") {
+    filter.isRoyalProject = true;
+  }
+
+  const listings = await Listing.find(filter)
     .populate("user", "name email profilePic")
     .sort("-createdAt");
 
@@ -86,6 +93,105 @@ export const getAllListings = catchAsync(async (req: Request, res: Response) => 
     success: true,
     count: listings.length,
     data: listings,
+  });
+});
+
+/**
+ * @desc    Admin: Get ALL listings for approval management (any status)
+ * @route   GET /api/v1/listings/admin/all
+ * @access  Admin only
+ */
+export const adminGetAllListings = catchAsync(async (req: Request, res: Response) => {
+  const { status } = req.query;
+  const filter: Record<string, unknown> = {};
+  if (status && status !== "all") filter.status = status;
+
+  const listings = await Listing.find(filter)
+    .populate("user", "name email profilePic phone")
+    .sort("-createdAt");
+
+  res.status(200).json({
+    success: true,
+    count: listings.length,
+    data: listings,
+  });
+});
+
+/**
+ * @desc    Admin: Get dashboard stats
+ * @route   GET /api/v1/listings/admin/stats
+ * @access  Admin only
+ */
+export const adminGetStats = catchAsync(async (req: Request, res: Response) => {
+  const [total, pending, approved, rejected] = await Promise.all([
+    Listing.countDocuments(),
+    Listing.countDocuments({ status: "pending" }),
+    Listing.countDocuments({ status: "approved" }),
+    Listing.countDocuments({ status: "rejected" }),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: { total, pending, approved, rejected },
+  });
+});
+
+/**
+ * @desc    Admin: Approve a listing
+ * @route   PATCH /api/v1/listings/admin/:id/approve
+ * @access  Admin only
+ */
+export const adminApproveListing = catchAsync(async (req: Request, res: Response) => {
+  const listing = await Listing.findById(req.params.id);
+  if (!listing) throw new AppError("Listing not found", 404);
+
+  listing.status = "approved";
+  listing.rejectionReason = undefined;
+  await listing.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Listing approved successfully",
+    data: listing,
+  });
+});
+
+/**
+ * @desc    Admin: Reject a listing
+ * @route   PATCH /api/v1/listings/admin/:id/reject
+ * @access  Admin only
+ */
+export const adminRejectListing = catchAsync(async (req: Request, res: Response) => {
+  const listing = await Listing.findById(req.params.id);
+  if (!listing) throw new AppError("Listing not found", 404);
+
+  listing.status = "rejected";
+  listing.rejectionReason = req.body.reason || "Did not meet listing standards.";
+  await listing.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Listing rejected",
+    data: listing,
+  });
+});
+
+/**
+ * @desc    Admin: Toggle a listing as a Royal Project / New Project
+ * @route   PATCH /api/v1/listings/admin/:id/royal-project
+ * @access  Admin only
+ */
+export const adminToggleRoyalProject = catchAsync(async (req: Request, res: Response) => {
+  const listing = await Listing.findById(req.params.id);
+  if (!listing) throw new AppError("Listing not found", 404);
+
+  listing.isRoyalProject = !listing.isRoyalProject;
+  await listing.save();
+
+  res.status(200).json({
+    success: true,
+    message: `Listing is ${listing.isRoyalProject ? "now" : "no longer"} a Royal Project`,
+    data: listing,
   });
 });
 

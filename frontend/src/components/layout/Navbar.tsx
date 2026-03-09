@@ -69,7 +69,7 @@ export function Navbar() {
   ];
 
   return (
-    <header className="w-full flex flex-col z-50">
+    <header className="w-full flex flex-col z-100">
       {/* Top Bar (Royal Blue) */}
       <div className="bg-royal-800 text-white h-11 text-xs">
         <div className="container mx-auto flex h-full items-center justify-between px-5">
@@ -82,7 +82,7 @@ export function Navbar() {
               <Home className="w-4 h-4" /> PROPERTIES
             </Link>
             <Link
-              href="#"
+              href="/plot-finder"
               className="hover:text-white font-semibold transition-colors"
             >
               PLOT FINDER

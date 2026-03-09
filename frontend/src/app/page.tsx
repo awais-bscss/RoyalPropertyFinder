@@ -1,9 +1,10 @@
 "use client";
 
 import { Navbar } from "@/components/layout/Navbar";
-import { Hero } from "@/components/features/home/Hero";
+import { Hero } from "@/components/features/home/hero/Hero";
 import { BrowseProperties } from "@/components/features/home/BrowseProperties";
 import { ExploreMore } from "@/components/features/home/ExploreMore";
+import { FeaturedProperties } from "@/components/features/home/FeaturedProperties";
 import { FeaturedProjects } from "@/components/features/home/FeaturedProjects";
 import { Footer } from "@/components/layout/Footer";
 
@@ -13,6 +14,7 @@ export default function HomePage() {
       <Navbar />
       <main>
         <Hero />
+        <FeaturedProperties />
         <BrowseProperties />
         <ExploreMore />
         <FeaturedProjects />

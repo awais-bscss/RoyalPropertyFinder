@@ -54,6 +54,22 @@ function formatPKR(currency: string, amount: number): string {
 
 const statusConfig: Record<string, { label: string; icon: any; cls: string }> =
   {
+    approved: {
+      label: "Approved",
+      icon: CheckCircle2,
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
+    },
+    pending: {
+      label: "Pending Review",
+      icon: Clock,
+      cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
+    },
+    rejected: {
+      label: "Rejected",
+      icon: XCircle,
+      cls: "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20",
+    },
+    // Legacy fallback
     Active: {
       label: "Active",
       icon: CheckCircle2,
@@ -90,7 +106,7 @@ export function PropertyListings() {
       try {
         const response: any = await apiClient.get("/listings/me/properties");
         // Map backend format to component's expected format
-        const formatted = (response.data || []).map((l: any) => ({
+        const formatted = (response?.data || []).map((l: any) => ({
           id: l._id,
           title: l.title,
           city: l.city,
@@ -98,7 +114,8 @@ export function PropertyListings() {
           price: formatPKR(l.currency, l.price),
           type: l.purpose, // "Sell" or "Rent"
           category: l.subtype,
-          status: l.isActive ? "Active" : "Expired", // Basic mapping, can be expanded
+          status: l.status || (l.isActive ? "approved" : "rejected"),
+          rejectionReason: l.rejectionReason,
           views: l.views || Math.floor(Math.random() * 500) + 50, // Mocked for now
           saves: l.saves || Math.floor(Math.random() * 50) + 5,
           rating: l.rating || (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1),
@@ -269,8 +286,15 @@ export function PropertyListings() {
               }}
               className="text-[14px] font-medium border border-slate-200 dark:border-slate-700 rounded-sm px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-royal-400 cursor-pointer"
             >
-              {["All", "Active", "Pending", "Expired"].map((s) => (
-                <option key={s}>{s}</option>
+              {[
+                { label: "All", value: "All" },
+                { label: "Approved", value: "approved" },
+                { label: "Pending Review", value: "pending" },
+                { label: "Rejected", value: "rejected" },
+              ].map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
               ))}
             </select>
             {/* Type */}

@@ -27,6 +27,9 @@ export interface IListing extends Document {
   mobileNumbers: string[];
   landline?: string;
   isActive: boolean;
+  status: "pending" | "approved" | "rejected";
+  rejectionReason?: string;
+  isRoyalProject: boolean;
 }
 
 const listingSchema = new Schema<IListing>(
@@ -57,6 +60,13 @@ const listingSchema = new Schema<IListing>(
     mobileNumbers: [{ type: String }],
     landline: { type: String },
     isActive: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    rejectionReason: { type: String },
+    isRoyalProject: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

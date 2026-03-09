@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Settings as SettingsIcon,
   MessageSquare,
+  ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 
@@ -55,7 +56,21 @@ const navItems: NavItem[] = [
       { id: "order-history", label: "Order History", icon: ClipboardList },
     ],
   },
-  { id: "settings", label: "Settings", icon: SettingsIcon },
+];
+
+const adminNavItems: NavItem[] = [
+  {
+    id: "admin",
+    label: "Admin Panel",
+    icon: ShieldCheck,
+    subItems: [
+      { id: "admin/overview", label: "Overview", icon: LayoutDashboard },
+      { id: "admin/listings", label: "Listings", icon: Building2 },
+      { id: "admin/users", label: "Users", icon: ShieldCheck },
+      { id: "admin/inquiries", label: "Inquiries", icon: MessageSquare },
+      { id: "admin/config", label: "Configuration", icon: SettingsIcon },
+    ],
+  },
 ];
 
 export function Sidebar({
@@ -73,6 +88,7 @@ export function Sidebar({
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([
     "property-management",
     "props-shop",
+    "admin-admin",
   ]);
 
   const toggleDropdown = (id: string) => {
@@ -93,7 +109,7 @@ export function Sidebar({
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col shrink-0
+          fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col shrink-0
           transform transition-transform duration-300 ease-in-out
           md:static md:translate-x-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -207,6 +223,104 @@ export function Sidebar({
               </div>
             );
           })}
+
+          {/* ── Admin nav (only visible to admins) ── */}
+          {user?.role === "admin" && (
+            <div className="pt-4">
+              <p className="text-[10px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest px-3 mb-1">
+                Administration
+              </p>
+              {adminNavItems.map((item) => {
+                const hasSub = !!item.subItems;
+                const isSubActive = item.subItems?.some((sub) =>
+                  pathname.includes(`/dashboard/${sub.id}`),
+                );
+                const active =
+                  pathname === `/dashboard/${item.id}` || isSubActive;
+                const isOpen = openDropdowns.includes(`admin-${item.id}`);
+
+                return (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => toggleDropdown(`admin-${item.id}`)}
+                      className={`
+                        w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5
+                        text-[14.5px] font-medium transition-all duration-150 cursor-pointer text-left
+                        ${
+                          active
+                            ? "text-royal-700 dark:text-royal-300 font-semibold"
+                            : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-white/90"
+                        }
+                      `}
+                    >
+                      <item.icon className="w-[17px] h-[17px] shrink-0" />
+                      <span className="flex-1">{item.label}</span>
+                      {isOpen ? (
+                        <ChevronDown className="w-4 h-4 opacity-70" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 opacity-70" />
+                      )}
+                    </button>
+
+                    {hasSub && isOpen && (
+                      <div className="mt-1 ml-4 pl-3 space-y-0.5 border-l border-slate-200 dark:border-white/10">
+                        {item.subItems!.map((sub) => {
+                          const subActive = pathname.includes(
+                            `/dashboard/${sub.id}`,
+                          );
+                          return (
+                            <Link
+                              key={sub.id}
+                              href={`/dashboard/${sub.id}`}
+                              onClick={() => setSidebarOpen(false)}
+                              className={`
+                                w-full flex items-center gap-3 px-3 py-2 rounded-lg group
+                                text-[14px] font-medium transition-all duration-150 cursor-pointer text-left
+                                ${
+                                  subActive
+                                    ? "bg-royal-100 dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-semibold"
+                                    : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-white/90"
+                                }
+                              `}
+                            >
+                              <sub.icon className="w-[15px] h-[15px] shrink-0" />
+                              <span className="flex-1">{sub.label}</span>
+                              {subActive && (
+                                <ChevronRight className="w-3 h-3 ml-auto shrink-0" />
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Settings (always last) ── */}
+          <div className="pt-2">
+            <Link
+              href="/dashboard/settings"
+              onClick={() => setSidebarOpen(false)}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                text-[14.5px] font-medium transition-all duration-150 cursor-pointer
+                ${
+                  currentPathSegment === "settings"
+                    ? "bg-[#daf1f5] dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-semibold"
+                    : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-white/90"
+                }
+              `}
+            >
+              <SettingsIcon className="w-[17px] h-[17px] shrink-0 transition-colors" />
+              <span className="flex-1">Settings</span>
+              {currentPathSegment === "settings" && (
+                <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />
+              )}
+            </Link>
+          </div>
         </nav>
 
         {/* ── User footer ── */}

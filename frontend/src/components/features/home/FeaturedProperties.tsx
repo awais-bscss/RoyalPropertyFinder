@@ -2,6 +2,7 @@
 
 import { Bed, Bath, Move, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -77,23 +78,23 @@ export function FeaturedProperties() {
     listings.length > 0 ? listings.slice(0, 3) : PROPERTIES;
 
   return (
-    <section className="py-20 bg-white dark:bg-slate-950">
-      <div className="container px-4">
-        <div className="flex items-end justify-between mb-12">
+    <section className="py-12 bg-white dark:bg-slate-950 relative z-0">
+      <div className="container px-4 mx-auto">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-50">
+            <h2 className="text-2xl md:text-[26px] font-bold text-slate-800 dark:text-white">
               Featured Properties
             </h2>
             <p className="text-slate-500 mt-2">
               Hand-picked luxury listings just for you
             </p>
           </div>
-          <Button
-            variant="link"
-            className="text-royal-800 font-bold hidden md:block"
+          <Link
+            href="/properties"
+            className="hidden md:flex items-center text-[#023E8A] font-bold text-[15px] hover:text-[#023E8A]/80 cursor-pointer transition-colors"
           >
             View All Properties →
-          </Button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -126,72 +127,80 @@ export function FeaturedProperties() {
                   "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80";
 
             return (
-              <Card
+              <div
                 key={id}
-                className="group overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all duration-300 bg-slate-50 dark:bg-slate-900"
+                className="bg-transparent rounded-xl overflow-hidden transition-all cursor-pointer group flex flex-col h-full border border-slate-200/60 dark:border-slate-800/80 hover:shadow-xl hover:border-transparent dark:hover:border-transparent"
               >
-                <CardHeader className="p-0 relative h-64 overflow-hidden">
-                  <img
-                    src={image}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <Badge className="absolute top-4 left-4 bg-royal-800">
-                    {status}
-                  </Badge>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white hover:text-red-500"
-                  >
-                    <Heart className="h-5 w-5" />
-                  </Button>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-xl group-hover:text-royal-800 transition-colors line-clamp-1">
-                      {title}
-                    </h3>
+                {/* Image Section */}
+                <div className="px-3 pt-3">
+                  <div className="relative h-48 md:h-56 w-full overflow-hidden rounded-xl">
+                    <img
+                      src={image}
+                      alt={title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute top-3 left-3 bg-[#023E8A] text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm uppercase tracking-wide">
+                      {status}
+                    </div>
+                    <button className="absolute top-3 right-3 text-white bg-black/20 hover:bg-black/40 backdrop-blur-sm p-1.5 rounded-full transition-colors cursor-pointer">
+                      <Heart size={16} />
+                    </button>
                   </div>
-                  <p className="text-royal-900 dark:text-royal-400 font-extrabold text-2xl mb-4">
+                </div>
+
+                {/* Content Section */}
+                <div className="py-4 px-4 flex-1 flex flex-col">
+                  {/* Price */}
+                  <p className="text-[18px] md:text-[20px] font-extrabold text-slate-800 dark:text-white leading-tight mb-1">
                     {price}
                   </p>
-                  <p className="text-slate-500 text-sm mb-6 flex items-center line-clamp-1">
-                    <span className="inline-block w-4 h-4 mr-2 bg-royal-400 rounded-full shrink-0" />{" "}
+
+                  {/* Title */}
+                  <h3 className="text-[16px] font-bold text-slate-900 dark:text-white group-hover:text-[#023E8A] transition-colors line-clamp-1 mb-1">
+                    {title}
+                  </h3>
+
+                  {/* Location */}
+                  <p className="text-[13px] text-slate-400 dark:text-slate-500 line-clamp-1 mb-4">
                     {location}
                   </p>
 
-                  <div className="grid grid-cols-3 gap-4 py-4 border-t border-slate-200 dark:border-slate-800">
+                  {/* Detail Icons */}
+                  <div className="mt-auto flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                     {beds > 0 && (
-                      <div className="flex items-center text-slate-600 dark:text-slate-400 text-sm">
-                        <Bed className="h-4 w-4 mr-2 text-royal-700" /> {beds}
+                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                        <Bed size={15} className="mt-0.5" />
+                        <span className="text-[13px] font-medium leading-[18px]">
+                          {beds}
+                        </span>
                       </div>
                     )}
                     {baths > 0 && (
-                      <div className="flex items-center text-slate-600 dark:text-slate-400 text-sm">
-                        <Bath className="h-4 w-4 mr-2 text-royal-700" /> {baths}
+                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                        <Bath size={15} className="mt-0.5" />
+                        <span className="text-[13px] font-medium leading-[18px]">
+                          {baths}
+                        </span>
                       </div>
                     )}
-                    <div className="flex items-center text-slate-600 dark:text-slate-400 text-sm col-span-1 overflow-hidden whitespace-nowrap text-ellipsis">
-                      <Move className="h-4 w-4 mr-2 shrink-0 text-royal-700" />{" "}
-                      <span className="truncate">{area}</span>
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 overflow-hidden whitespace-nowrap text-ellipsis ml-auto">
+                      <Move size={15} className="shrink-0" />
+                      <span className="text-[13px] font-medium truncate">
+                        {area}
+                      </span>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="p-6 pt-0">
-                  <Button className="w-full bg-slate-900 dark:bg-royal-800 hover:bg-royal-700">
-                    View Details
-                  </Button>
-                </CardFooter>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
-
         <div className="mt-12 text-center md:hidden">
-          <Button variant="outline" className="w-full">
-            View All Properties
-          </Button>
+          <Link href="/properties">
+            <Button variant="outline" className="w-full">
+              View All Properties
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
