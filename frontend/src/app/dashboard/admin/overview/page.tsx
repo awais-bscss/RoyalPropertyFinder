@@ -11,8 +11,12 @@ export default function AdminOverviewPage() {
           listingStats={ctx.listingStats}
           platformStats={ctx.platformStats}
           recentListings={ctx.listings}
+          recentUsers={ctx.users}
+          recentInquiries={ctx.inquiries}
+          inquiryStats={ctx.inquiryStats}
           onViewAllListings={ctx.navigateToListings}
           onViewAllUsers={ctx.navigateToUsers}
+          onViewAllInquiries={ctx.navigateToInquiries}
         />
       )}
     </AdminPanel>

@@ -26,7 +26,7 @@ export function RejectModal({ listing, onConfirm, onCancel }: Props) {
       className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       style={{ zIndex: 200 }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center">

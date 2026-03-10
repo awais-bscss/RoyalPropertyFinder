@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { RefreshCcw, ShieldCheck } from "lucide-react";
 import apiClient from "@/lib/axios";
-import type { Listing, ListingStats, PlatformStats, UserRecord } from "./types";
+import type {
+  Listing,
+  ListingStats,
+  PlatformStats,
+  UserRecord,
+  SupportInquiry,
+  InquiryStats,
+} from "./types";
+import { InquiryService } from "@/services/inquiry.service";
 
 // ── Shared context passed down to each page ───────────────────────────────────
 export interface AdminContext {
@@ -32,6 +41,11 @@ export interface AdminContext {
 
   navigateToListings: () => void;
   navigateToUsers: () => void;
+  navigateToInquiries: () => void;
+
+  inquiries: SupportInquiry[];
+  inquiryStats: InquiryStats | null;
+  inquiriesLoading: boolean;
 }
 
 interface Props {
@@ -39,6 +53,8 @@ interface Props {
 }
 
 export function AdminPanel({ children }: Props) {
+  const router = useRouter();
+
   // ── Listings state ──────────────────────────────────────────────────────────
   const [listings, setListings] = useState<Listing[]>([]);
   const [listingStats, setListingStats] = useState<ListingStats | null>(null);
@@ -55,6 +71,11 @@ export function AdminPanel({ children }: Props) {
   const [usersLoading, setUsersLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("all");
   const [userSearch, setUserSearch] = useState("");
+
+  // ── Inquiries state ─────────────────────────────────────────────────────────
+  const [inquiries, setInquiries] = useState<SupportInquiry[]>([]);
+  const [inquiryStats, setInquiryStats] = useState<InquiryStats | null>(null);
+  const [inquiriesLoading, setInquiriesLoading] = useState(true);
 
   // ── Fetch listings ──────────────────────────────────────────────────────────
   const fetchListings = useCallback(async () => {
@@ -107,6 +128,27 @@ export function AdminPanel({ children }: Props) {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // ── Fetch inquiries ─────────────────────────────────────────────────────────
+  const fetchInquiries = useCallback(async () => {
+    setInquiriesLoading(true);
+    try {
+      const [inquiriesRes, statsRes] = await Promise.all([
+        InquiryService.getAllInquiries(),
+        InquiryService.getInquiryStats(),
+      ]);
+      setInquiries(inquiriesRes.data || []);
+      setInquiryStats(statsRes.data || null);
+    } catch {
+      toast.error("Failed to load inquiries");
+    } finally {
+      setInquiriesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
 
   // ── Listing actions ─────────────────────────────────────────────────────────
   const handleApprove = async (listing: Listing) => {
@@ -179,6 +221,7 @@ export function AdminPanel({ children }: Props) {
   const handleRefresh = () => {
     fetchListings();
     fetchUsers();
+    fetchInquiries();
     toast.success("Refreshed!");
   };
 
@@ -206,8 +249,13 @@ export function AdminPanel({ children }: Props) {
     onRoleChange: handleRoleChange,
     onDeleteUser: handleDeleteUser,
 
-    navigateToListings: () => {},
-    navigateToUsers: () => {},
+    navigateToListings: () => router.push("/dashboard/admin/listings"),
+    navigateToUsers: () => router.push("/dashboard/admin/users"),
+    navigateToInquiries: () => router.push("/dashboard/admin/inquiries"),
+
+    inquiries,
+    inquiryStats,
+    inquiriesLoading,
   };
 
   return (

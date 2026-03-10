@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Mail, Phone, MapPin, ChevronUp } from "lucide-react";
 import {

@@ -106,10 +106,10 @@ export function Navbar() {
               TOOLS
             </Link>
             <Link
-              href="#"
+              href="/contact"
               className="hover:text-white font-semibold transition-colors"
             >
-              MORE
+              CONTACT
             </Link>
           </div>
 
@@ -307,6 +307,7 @@ export function Navbar() {
                 { name: "RENT", href: "/?tab=rent" },
                 { name: "AGENTS", href: "/agents" },
                 { name: "NEW PROJECTS", href: "/new-projects" },
+                { name: "CONTACT", href: "/contact" },
               ].map((item) => (
                 <Link
                   key={item.name}

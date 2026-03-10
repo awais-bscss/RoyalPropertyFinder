@@ -16,6 +16,7 @@ import { LISTING_STATUS, formatPrice, timeAgo } from "../types";
 import type { Listing } from "../types";
 import { ListingDrawer } from "./ListingDrawer";
 import { RejectModal } from "./RejectModal";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 interface Props {
   listings: Listing[];
@@ -55,7 +56,7 @@ export function ListingsTab({
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col sm:flex-row gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -82,11 +83,9 @@ export function ListingsTab({
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-royal-600" />
-          </div>
+          <TableSkeleton count={6} />
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-20 text-slate-400">
             <Building2 className="w-10 h-10 opacity-40" />

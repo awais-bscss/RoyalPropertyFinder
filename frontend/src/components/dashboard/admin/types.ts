@@ -44,13 +44,26 @@ export interface ListingStats {
   rejected: number;
 }
 
+export interface InquiryStats {
+  total: number;
+  open: number;
+  in_progress: number;
+  resolved: number;
+}
+
 export interface PlatformStats {
   totalUsers: number;
   newUsersThisMonth: number;
 }
 
+export interface InquiryReply {
+  message: string;
+  adminName: string;
+  createdAt: string;
+}
+
 export interface SupportInquiry {
-  id: string;
+  _id: string;
   subject: string;
   message: string;
   senderName: string;
@@ -60,6 +73,7 @@ export interface SupportInquiry {
   status: "open" | "in_progress" | "resolved";
   createdAt: string;
   priority: "high" | "medium" | "low";
+  replies?: InquiryReply[];
 }
 
 // ── Display Maps & Helpers ──────────────────────────────────────────────────

@@ -32,7 +32,7 @@ export function ConfigTab() {
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
       {/* Platform Details Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="border-b border-slate-100 dark:border-slate-800 p-5 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-royal-100 text-royal-700 flex items-center justify-center shrink-0">
             <Server className="w-4 h-4" />
@@ -106,7 +106,7 @@ export function ConfigTab() {
       </div>
 
       {/* Listing Rules Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="border-b border-slate-100 dark:border-slate-800 p-5 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
             <Sliders className="w-4 h-4" />
@@ -169,7 +169,7 @@ export function ConfigTab() {
       </div>
 
       {/* Security Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="border-b border-slate-100 dark:border-slate-800 p-5 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
             <Shield className="w-4 h-4" />
