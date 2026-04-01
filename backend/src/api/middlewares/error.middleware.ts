@@ -32,11 +32,25 @@ export const globalErrorHandler = (
     message = `Invalid input data. ${errors.join(". ")}`;
   }
 
+  // Multer Error (File uploading)
+  if (err.name === "MulterError") {
+    statusCode = 400;
+    if (err.code === "LIMIT_FILE_SIZE") {
+      message = "File too large. Maximum limit is 50MB.";
+    } else if (err.code === "LIMIT_FILE_COUNT") {
+
+      message = "Too many files uploaded.";
+    } else {
+      message = `Upload error: ${err.message}`;
+    }
+  }
+
   // JSON Web Token Error
   if (err.name === "JsonWebTokenError") {
     statusCode = 401;
     message = "Invalid token. Please log in again!";
   }
+
 
   res.status(statusCode).json({
     success: false,

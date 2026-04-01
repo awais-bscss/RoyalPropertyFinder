@@ -52,7 +52,8 @@ const navItems: NavItem[] = [
     label: "Props Shop",
     icon: ShoppingBag,
     subItems: [
-      { id: "buy-product", label: "Buy Product", icon: ShoppingCart },
+      { id: "props-shop", label: "Browse Shop", icon: ShoppingBag },
+      { id: "buy-product", label: "Checkout", icon: ShoppingCart },
       { id: "order-history", label: "Order History", icon: ClipboardList },
     ],
   },
@@ -67,6 +68,7 @@ const adminNavItems: NavItem[] = [
       { id: "admin/overview", label: "Overview", icon: LayoutDashboard },
       { id: "admin/listings", label: "Listings", icon: Building2 },
       { id: "admin/users", label: "Users", icon: ShieldCheck },
+      { id: "admin/orders", label: "Shop Orders", icon: ShoppingCart },
       { id: "admin/inquiries", label: "Inquiries", icon: MessageSquare },
       { id: "admin/config", label: "Configuration", icon: SettingsIcon },
     ],
@@ -81,9 +83,11 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
 
-  // Convert current path back into active tab logic safely
-  const currentPathSegment =
-    pathname === "/dashboard" ? "dashboard" : pathname.split("/").pop() || "";
+  // Proper active path logic for nested routes
+  const getIsActive = (id: string) => {
+    if (id === "dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(`/dashboard/${id}`);
+  };
 
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([
     "property-management",
@@ -144,10 +148,10 @@ export function Sidebar({
         <nav className="flex-1 px-3 pt-5 pb-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const hasSub = !!item.subItems;
-            const isSubActive = item.subItems?.some(
-              (sub) => sub.id === currentPathSegment,
+            const isSubActive = item.subItems?.some((sub) =>
+              getIsActive(sub.id),
             );
-            const active = currentPathSegment === item.id || isSubActive;
+            const active = getIsActive(item.id) || isSubActive;
             const isOpen = openDropdowns.includes(item.id);
 
             const WrapperTag = hasSub ? "button" : Link;
@@ -194,7 +198,7 @@ export function Sidebar({
                 {hasSub && isOpen && (
                   <div className="mt-1 ml-4 pl-3 space-y-0.5 border-l border-slate-200 dark:border-white/10">
                     {item.subItems!.map((sub) => {
-                      const subActive = currentPathSegment === sub.id;
+                      const subActive = getIsActive(sub.id);
                       return (
                         <Link
                           key={sub.id}
@@ -308,7 +312,7 @@ export function Sidebar({
                 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                 text-[14.5px] font-medium transition-all duration-150 cursor-pointer
                 ${
-                  currentPathSegment === "settings"
+                  getIsActive("settings")
                     ? "bg-[#daf1f5] dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-semibold"
                     : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-white/90"
                 }
@@ -316,7 +320,7 @@ export function Sidebar({
             >
               <SettingsIcon className="w-[17px] h-[17px] shrink-0 transition-colors" />
               <span className="flex-1">Settings</span>
-              {currentPathSegment === "settings" && (
+              {getIsActive("settings") && (
                 <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />
               )}
             </Link>

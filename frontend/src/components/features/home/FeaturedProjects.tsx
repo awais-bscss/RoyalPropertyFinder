@@ -1,15 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
+import { formatPrice } from "@/lib/utils";
 import { ChevronRight, Home, Maximize2, Zap, Loader2 } from "lucide-react";
 import { featuredProjectsData as mockData } from "@/data/mock/featuredProjects";
 import Link from "next/link";
 import { CarouselArrow } from "@/components/common/CarouselArrow";
 import apiClient from "@/lib/axios";
 
-function formatPKR(price: number) {
-  if (price >= 10000000) return `${(price / 10000000).toFixed(2)} Crore`;
-  if (price >= 100000) return `${(price / 100000).toFixed(2)} Lakh`;
-  return price.toLocaleString();
-}
 
 export function FeaturedProjects() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -27,7 +23,7 @@ export function FeaturedProjects() {
         const realProjects = (response?.data || []).map((p: any) => ({
           id: p._id,
           title: p.title,
-          priceRange: `${p.currency} ${formatPKR(p.price)}`,
+          priceRange: formatPrice(p.currency, p.price),
           location: `${p.city}, ${p.location}`,
           types: [p.subtype],
           areaRange: `${p.areaSize} ${p.areaUnit}`,
@@ -126,8 +122,9 @@ export function FeaturedProjects() {
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               {projects.map((project) => (
-                <div
+                <Link
                   key={project.id}
+                  href={`/properties/${project.id.startsWith('mock-') ? project.id.split('mock-')[1] : project.id}`}
                   className="bg-transparent rounded-xl overflow-hidden transition-all cursor-pointer group flex flex-col h-full min-w-[300px] sm:min-w-[350px] snap-start"
                 >
                   <div className="px-3 pt-3">
@@ -171,7 +168,7 @@ export function FeaturedProjects() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
 

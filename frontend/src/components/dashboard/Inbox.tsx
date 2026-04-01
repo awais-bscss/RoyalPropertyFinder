@@ -208,7 +208,7 @@ export function Inbox() {
             <h2 className="text-[16px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <InboxIcon className="w-5 h-5 text-royal-600" />
               Inbox
-              <span className="text-[12px] font-bold bg-royal-600 text-white px-1.5 py-0.5 rounded-full">
+              <span className="flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-royal-600 text-white rounded-full">
                 {conversations.filter((c) => c.unread).length}
               </span>
             </h2>

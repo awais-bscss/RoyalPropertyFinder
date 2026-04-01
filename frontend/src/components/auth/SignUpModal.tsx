@@ -6,7 +6,7 @@ import { FaFacebook } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { useDispatch } from "react-redux";
 import { setAuth } from "@/store/slices/authSlice";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { AuthService } from "@/services/auth.service";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
@@ -37,7 +37,9 @@ export function SignUpModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
       document.body.style.paddingRight = "12px";
+      document.documentElement.style.paddingRight = "12px";
       // Clear fields on open to prevent stale data
       setName("");
       setEmail("");
@@ -45,12 +47,16 @@ export function SignUpModal({
       setPassword("");
       setConfirmPassword("");
     } else {
-      document.body.style.overflow = "unset";
-      document.body.style.paddingRight = "0px";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.paddingRight = "";
+      document.documentElement.style.paddingRight = "";
     }
     return () => {
-      document.body.style.overflow = "unset";
-      document.body.style.paddingRight = "0px";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.paddingRight = "";
+      document.documentElement.style.paddingRight = "";
     };
   }, [isOpen]);
 

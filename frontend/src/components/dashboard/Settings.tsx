@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useDispatch } from "react-redux";
+import { setAuth } from "@/store/slices/authSlice";
 import {
   User,
   Lock,
@@ -20,7 +22,10 @@ import {
   Trash2,
   LogOut,
   Key,
+  Loader2,
 } from "lucide-react";
+import { toast } from "react-toastify";
+import { AuthService } from "@/services/auth.service";
 
 // ── Nav Items ─────────────────────────────────────────────────────────────────
 const navItems = [
@@ -54,13 +59,15 @@ function Field({
 function TextInput({
   type = "text",
   placeholder,
-  defaultValue,
+  value,
+  onChange,
   disabled,
   icon: Icon,
 }: {
   type?: string;
   placeholder?: string;
-  defaultValue?: string;
+  value?: string;
+  onChange?: (e: any) => void;
   disabled?: boolean;
   icon?: any;
 }) {
@@ -72,7 +79,8 @@ function TextInput({
       <input
         type={type}
         placeholder={placeholder}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={onChange}
         disabled={disabled}
         className={`w-full ${Icon ? "pl-9" : "pl-3.5"} pr-3.5 py-2.5 text-[13px] rounded-sm border
           border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900
@@ -157,7 +165,7 @@ function ToggleRow({
 }
 
 // ── Password Input ────────────────────────────────────────────────────────────
-function PasswordInput({ placeholder }: { placeholder?: string }) {
+function PasswordInput({ placeholder, value, onChange }: { placeholder?: string, value?: string, onChange?: (e: any) => void }) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -165,6 +173,8 @@ function PasswordInput({ placeholder }: { placeholder?: string }) {
       <input
         type={show ? "text" : "password"}
         placeholder={placeholder ?? "••••••••"}
+        value={value}
+        onChange={onChange}
         className="w-full pl-9 pr-10 py-2.5 text-[13px] rounded-sm border border-slate-200 dark:border-slate-700
           bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 placeholder:text-slate-400
           focus:outline-none focus:border-royal-500 transition-colors"
@@ -217,6 +227,109 @@ function DangerRow({
 // ── Main Component ────────────────────────────────────────────────────────────
 export function Settings({ user }: { user: any }) {
   const [activeTab, setActiveTab] = useState("profile");
+  const dispatch = useDispatch();
+
+  // Profile Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
+  const [isProfileUpdating, setIsProfileUpdating] = useState(false);
+
+  // User Info State
+  const [name, setName] = useState(user?.name || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [city, setCity] = useState(user?.city || "");
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("phone", phone);
+    formData.append("city", city);
+
+    setIsProfileUpdating(true);
+    try {
+      const response = await AuthService.updateProfile(formData);
+      if (response.success) {
+        toast.success("Profile updated successfully!");
+        dispatch(setAuth(response.data));
+      }
+    } catch (err: any) {
+      // Handled by axios interceptor
+    } finally {
+      setIsProfileUpdating(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size is too large (max 2MB)");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("profilePic", file);
+
+    setIsPhotoUploading(true);
+    try {
+      const response = await AuthService.updateProfile(formData);
+      if (response.success) {
+        toast.success("Profile photo updated!");
+        // Update Redux state with the fresh user data
+        dispatch(setAuth(response.data));
+      }
+    } catch (err: any) {
+      // API error handled by interceptor toast usually
+    } finally {
+      setIsPhotoUploading(false);
+      // Reset input so they can pick same file again if needed
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Password Update State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+    setIsUpdatingPassword(true);
+    try {
+      await AuthService.updatePassword({
+        currentPassword,
+        password: newPassword,
+        confirmPassword,
+      });
+      toast.success("Password updated successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      // Automatic interceptor handles API errors
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleForgotCurrentPassword = async () => {
+    if (!user?.email) return;
+    try {
+      toast.info("Requesting reset link...");
+      const response: any = await AuthService.forgotPassword(user.email);
+      toast.success("Reset link sent! Please check your email inbox to create a new password.");
+    } catch (err: any) {
+      // Handle silently (already shown via interceptor)
+    }
+  };
 
   return (
     <div className="flex gap-5 h-full">
@@ -241,17 +354,17 @@ export function Settings({ user }: { user: any }) {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-left
-                    text-[15px] transition-all duration-150 cursor-pointer group
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left
+                    text-[14.5px] transition-all duration-150 cursor-pointer group
                     ${
                       active
-                        ? "bg-[#daf1f5] dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-bold"
-                        : "text-slate-600 dark:text-white/50 hover:bg-slate-50 dark:hover:bg-white/5 font-semibold hover:text-slate-800 hover:dark:text-white/90"
+                        ? "bg-[#daf1f5] dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-semibold"
+                        : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 font-medium hover:text-slate-800 hover:dark:text-white/90"
                     }`}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
+                  <Icon className="w-[17px] h-[17px] shrink-0" />
                   <span className="flex-1 truncate">{item.label}</span>
-                  {active && <ChevronRight className="w-5 h-5 shrink-0" />}
+                  {active && <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />}
                 </button>
               );
             })}
@@ -269,15 +382,45 @@ export function Settings({ user }: { user: any }) {
               title="Profile Photo"
               description="This is shown publicly on your listings and messages."
               footer={
-                <button className="flex items-center gap-2 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer">
-                  <Camera className="w-4 h-4" /> Upload Photo
-                </button>
+                <>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handlePhotoUpload} 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isPhotoUploading}
+                    className="flex items-center gap-2 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer disabled:opacity-75"
+                  >
+                    {isPhotoUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4" />
+                        Upload Photo
+                      </>
+                    )}
+                  </button>
+                </>
               }
             >
               <div className="flex items-center gap-5">
-                <div className="relative shrink-0">
-                  <div className="w-16 h-16 rounded-sm bg-royal-100 dark:bg-royal-900/30 border border-royal-200 dark:border-royal-800/40 flex items-center justify-center text-royal-700 dark:text-royal-400 font-bold text-2xl uppercase overflow-hidden">
-                    {user?.profilePic ? (
+                <div 
+                  className="relative shrink-0 cursor-pointer group/avatar"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="w-16 h-16 rounded-sm bg-royal-100 dark:bg-royal-900/30 border border-royal-200 dark:border-royal-800/40 flex items-center justify-center text-royal-700 dark:text-royal-400 font-bold text-2xl uppercase overflow-hidden group-hover/avatar:opacity-80 transition-opacity">
+                    {isPhotoUploading ? (
+                      <div className="flex items-center justify-center w-full h-full bg-slate-50 dark:bg-slate-800/50">
+                        <Loader2 className="w-6 h-6 text-royal-500 animate-spin" />
+                      </div>
+                    ) : user?.profilePic ? (
                       <img
                         src={user.profilePic}
                         alt={user?.name}
@@ -287,7 +430,7 @@ export function Settings({ user }: { user: any }) {
                       user?.name?.[0] || "U"
                     )}
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-royal-600 border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-royal-600 border-2 border-white dark:border-slate-900 flex items-center justify-center group-hover/avatar:scale-110 transition-transform">
                     <Camera className="w-3 h-3 text-white" />
                   </div>
                 </div>
@@ -306,62 +449,72 @@ export function Settings({ user }: { user: any }) {
             </Card>
 
             {/* Personal Info Card */}
-            <Card
-              title="Personal Information"
-              description="Your name and contact details visible to other users."
-              footer={
-                <button className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer">
-                  Save Changes
-                </button>
-              }
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Full Name">
-                  <TextInput
-                    icon={User}
-                    defaultValue={user?.name}
-                    placeholder="Your full name"
-                  />
-                </Field>
-                <Field label="Email Address" hint="">
-                  <div>
+            <form onSubmit={handleProfileUpdate}>
+              <Card
+                title="Personal Information"
+                description="Your name and contact details visible to other users."
+                footer={
+                  <button 
+                    type="submit"
+                    disabled={isProfileUpdating}
+                    className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer disabled:opacity-75"
+                  >
+                    {isProfileUpdating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </button>
+                }
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Full Name">
                     <TextInput
-                      icon={Mail}
-                      type="email"
-                      defaultValue={user?.email}
-                      disabled
+                      icon={User}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your full name"
                     />
-                    <p className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4" /> Verified email
-                      address
-                    </p>
-                  </div>
-                </Field>
-                <Field label="Phone Number">
-                  <TextInput
-                    icon={Phone}
-                    type="tel"
-                    placeholder="+92 3XX XXXXXXX"
-                  />
-                </Field>
-                <Field label="Location / City">
-                  <TextInput
-                    icon={MapPin}
-                    placeholder="e.g. Lahore, Pakistan"
-                  />
-                </Field>
-                <Field
-                  label="Website / Portfolio"
-                  hint="Optional — shown on your agent profile."
-                >
-                  <TextInput
-                    icon={Globe}
-                    type="url"
-                    placeholder="https://yoursite.com"
-                  />
-                </Field>
-              </div>
-            </Card>
+                  </Field>
+                  <Field label="Email Address" hint="">
+                    <div>
+                      <TextInput
+                        icon={Mail}
+                        type="email"
+                        value={user?.email}
+                        disabled
+                        placeholder="your@email.com"
+                      />
+                      {(user?.isEmailVerified || user?.role === "admin") && (
+                        <p className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4" /> Verified email
+                          address
+                        </p>
+                      )}
+                    </div>
+                  </Field>
+                  <Field label="Phone Number" hint="Useful for clients to reach you.">
+                    <TextInput
+                      icon={Phone}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+92 3XX XXXXXXX"
+                    />
+                  </Field>
+                  <Field label="Location / City">
+                    <TextInput
+                      icon={MapPin}
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Lahore, Pakistan"
+                    />
+                  </Field>
+                </div>
+              </Card>
+            </form>
           </>
         )}
 
@@ -369,27 +522,36 @@ export function Settings({ user }: { user: any }) {
         {activeTab === "security" && (
           <>
             {/* Change Password */}
-            <Card
-              title="Change Password"
-              description="Use a strong password that you don't use anywhere else."
-              footer={
-                <button className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer">
-                  Update Password
-                </button>
-              }
-            >
-              <div className="space-y-4 max-w-md">
-                <Field label="Current Password">
-                  <PasswordInput placeholder="Enter current password" />
-                </Field>
-                <Field label="New Password">
-                  <PasswordInput placeholder="Create a strong password" />
-                </Field>
-                <Field label="Confirm New Password">
-                  <PasswordInput placeholder="Repeat new password" />
-                </Field>
-              </div>
-            </Card>
+            <form onSubmit={handlePasswordUpdate}>
+              <Card
+                title="Change Password"
+                description="Use a strong password that you don't use anywhere else."
+                footer={
+                  <button type="submit" disabled={isUpdatingPassword} className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer disabled:opacity-70">
+                    {isUpdatingPassword ? "Updating..." : "Update Password"}
+                  </button>
+                }
+              >
+                <div className="space-y-4 max-w-md">
+                  <Field label="Current Password">
+                    <PasswordInput value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" />
+                    <button 
+                      type="button" 
+                      onClick={handleForgotCurrentPassword}
+                      className="text-xs font-bold text-royal-600 dark:text-royal-400 hover:underline mt-2 inline-block cursor-pointer"
+                    >
+                      Forgot current password?
+                    </button>
+                  </Field>
+                  <Field label="New Password">
+                    <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Create a strong password" />
+                  </Field>
+                  <Field label="Confirm New Password">
+                    <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat new password" />
+                  </Field>
+                </div>
+              </Card>
+            </form>
 
             {/* Active Sessions */}
             <Card

@@ -1,29 +1,35 @@
 import nodemailer from "nodemailer";
-import dotenv from "dotenv";
 
-dotenv.config();
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-export const sendEmail = async (options: {
-  to: string;
+interface EmailOptions {
+  email: string;
   subject: string;
-  text: string;
+  message: string;
   html?: string;
-}) => {
+}
+
+export const sendEmail = async (options: EmailOptions) => {
+  // 1) Create a transporter
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.SMTP_USER,
+      // Gmail App Passwords are displayed with spaces but must be used without
+      pass: (process.env.SMTP_PASS || "").replace(/\s/g, ""),
+    },
+  });
+
+  // 2) Define the email options
   const mailOptions = {
-    from: `"Royal Property Finder" <${process.env.SMTP_USER}>`,
-    to: options.to,
+    from: `"Royal Property Finder - No Reply" <${process.env.SMTP_USER}>`,
+    to: options.email,
     subject: options.subject,
-    text: options.text,
+    text: options.message,
     html: options.html,
+    replyTo: "noreply@royalpropertyfinder.com", // Prevents users from replying to the automated email
   };
 
-  return transporter.sendMail(mailOptions);
+  // 3) Actually send the email
+  await transporter.sendMail(mailOptions);
 };

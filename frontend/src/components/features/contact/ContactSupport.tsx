@@ -3,7 +3,7 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import {
   Mail,
   Phone,

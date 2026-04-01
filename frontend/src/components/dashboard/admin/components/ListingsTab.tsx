@@ -12,7 +12,8 @@ import {
   XCircle,
   Crown,
 } from "lucide-react";
-import { LISTING_STATUS, formatPrice, timeAgo } from "../types";
+import { LISTING_STATUS, timeAgo } from "../types";
+import { formatPrice } from "@/lib/utils";
 import type { Listing } from "../types";
 import { ListingDrawer } from "./ListingDrawer";
 import { RejectModal } from "./RejectModal";

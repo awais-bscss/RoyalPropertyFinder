@@ -3,6 +3,8 @@ import { catchAsync } from "../../shared/utils/catchAsync";
 import { AppError } from "../../shared/errors/AppError";
 import Listing from "./listing.model";
 import { createListingSchema, updateListingSchema } from "./listing.validation";
+import { uploadToCloudinary } from "../../shared/services/cloudinary.service";
+
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 /** Safely parse a JSON string or return the value as-is */
@@ -46,15 +48,37 @@ export const createListing = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("Not authorized to create listing", 401);
   }
 
-  // 2. Build public URLs for uploaded images (multer puts files in req.files)
-  const uploadedFiles = (req as any).files as Express.Multer.File[] | undefined;
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const imageUrls: string[] = (uploadedFiles || []).map(
-    (f) => `${baseUrl}/uploads/listings/${f.filename}`
+  // 2. Handle file uploads to Cloudinary
+  const files = (req.files as any) || {};
+  const imageFiles = files.images as Express.Multer.File[] | undefined;
+  const videoFiles = files.videos as Express.Multer.File[] | undefined;
+
+  // Upload images concurrently
+  const imageUrlPromises = (imageFiles || []).map(file => 
+    uploadToCloudinary(file.path, "royal-property-finder/listings/images")
+  );
+  
+  // Upload videos concurrently
+  const videoUrlPromises = (videoFiles || []).map(file => 
+    uploadToCloudinary(file.path, "royal-property-finder/listings/videos")
   );
 
-  // 3. Merge image URLs into body, then coerce types for Zod
-  const rawBody = coerceBody({ ...req.body, images: imageUrls });
+  const [imageUrls, videoUrls] = await Promise.all([
+    Promise.all(imageUrlPromises),
+    Promise.all(videoUrlPromises)
+  ]);
+
+  // 3. Merge URLs into body, then coerce types for Zod
+  // We combine any manually provided video Links (e.g. YouTube) with the new Cloudinary video uploads
+  const bodyVideoLinks = tryParseJSON(req.body.videoLinks);
+  const existingVideoLinks = Array.isArray(bodyVideoLinks) ? bodyVideoLinks : [];
+  const finalVideoLinks = [...existingVideoLinks, ...videoUrls];
+
+  const rawBody = coerceBody({ 
+    ...req.body, 
+    images: imageUrls,
+    videoLinks: finalVideoLinks 
+  });
 
   // 4. Validate against Zod schema
   const validatedData = createListingSchema.parse(rawBody);
@@ -63,7 +87,9 @@ export const createListing = catchAsync(async (req: Request, res: Response) => {
   const listing = await Listing.create({
     ...validatedData,
     user: user._id,
+    status: user.role === "admin" ? "approved" : "pending",
   });
+
 
   res.status(201).json({
     success: true,
@@ -71,6 +97,7 @@ export const createListing = catchAsync(async (req: Request, res: Response) => {
     data: listing,
   });
 });
+
 
 /**
  * @desc    Get all active property listings
@@ -86,6 +113,7 @@ export const getAllListings = catchAsync(async (req: Request, res: Response) => 
   }
 
   const listings = await Listing.find(filter)
+    .select("-description -selectedAmenities -videoLinks")
     .populate("user", "name email profilePic")
     .sort("-createdAt");
 
@@ -313,30 +341,40 @@ export const updateListing = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("You are not authorized to edit this listing", 403);
   }
 
-  // 4. Handle newly-uploaded images (if any)
-  //    New images are appended to the existing set; the client can also send
-  //    a pruned `images` array in the body to remove old ones explicitly.
-  const uploadedFiles = (req as any).files as Express.Multer.File[] | undefined;
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const newImageUrls: string[] = (uploadedFiles || []).map(
-    (f) => `${baseUrl}/uploads/listings/${f.filename}`
+  // 4. Handle newly-uploaded images and videos to Cloudinary
+  const files = (req.files as any) || {};
+  const imageFiles = files.images as Express.Multer.File[] | undefined;
+  const videoFiles = files.videos as Express.Multer.File[] | undefined;
+
+  // Upload concurrently
+  const imagePromises = (imageFiles || []).map(file => 
+    uploadToCloudinary(file.path, "royal-property-finder/listings/images")
+  );
+  const videoPromises = (videoFiles || []).map(file => 
+    uploadToCloudinary(file.path, "royal-property-finder/listings/videos")
   );
 
+  const [newImageUrls, newVideoUrls] = await Promise.all([
+    Promise.all(imagePromises),
+    Promise.all(videoPromises)
+  ]);
+
   // 5. Coerce + merge body
-  //    If the client sends an explicit `images` array we respect it;
-  //    otherwise we keep the listing's existing images and append new uploads.
   const rawBody = coerceBody({ ...req.body });
 
-  // Resolve the final images array:
-  //  - Client sent an explicit list  → use that list + any new uploads
-  //  - Client sent nothing           → keep existing images + any new uploads
+  // Resolve final images array
   const existingImages = Array.isArray(rawBody.images)
     ? (rawBody.images as string[])
     : listing.images;
-  const finalImages = [...existingImages, ...newImageUrls];
-  rawBody.images = finalImages;
+  rawBody.images = [...existingImages, ...newImageUrls];
 
-  // 6. Validate through the partial (all-optional) Zod schema
+  // Resolve final videoLinks array
+  const existingVideoLinks = Array.isArray(rawBody.videoLinks)
+    ? (rawBody.videoLinks as string[])
+    : listing.videoLinks;
+  rawBody.videoLinks = [...existingVideoLinks, ...newVideoUrls];
+
+  // 6. Validate through the partial Zod schema
   const validatedData = updateListingSchema.parse(rawBody);
 
   // 7. Apply updates
@@ -349,3 +387,4 @@ export const updateListing = catchAsync(async (req: Request, res: Response) => {
     data: listing,
   });
 });
+

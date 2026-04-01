@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 
 // Create a centralized Axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -49,19 +49,16 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized globally
     if (status === 401) {
+      const url = originalRequest?.url || '';
       // Don't show "Session expired" message for login attempts or initial auth checks
-      if (originalRequest?.url !== '/auth/login' && originalRequest?.url !== '/auth/me') {
+      if (!url.includes('/auth/login') && !url.includes('/auth/me')) {
         toast.error("Your session has expired. Please log in again.");
+        console.warn("Unauthorized API call. Token may be missing or expired.");
       }
-      console.warn("Unauthorized API call. Token may be missing or expired.");
     } 
     
-    // Handle 403 Forbidden globally
-    if (status === 403) {
-      toast.error("You don't have permission to perform this action.");
-    }
     // Handle generic 500 server errors
-    else if (status && status >= 500) {
+    if (status && status >= 500) {
       toast.error("Critical Server Error. Please contact support.");
       console.error("Critical Server Error:", error);
     }
@@ -69,10 +66,20 @@ apiClient.interceptors.response.use(
     else if (!response && error.code === 'ERR_NETWORK') {
       toast.error("Network error. Please check your backend is running.");
     }
+    // Handle 403 Forbidden 
+    else if (status === 403) {
+      // If there's a specific message from backend, the block below will handle it
+      if (!response?.data) {
+        toast.error("You don't have permission to perform this action.");
+      }
+    }
 
     // ALWAYS handle standard API specific error messages if they exist (e.g., 400, 401, 404)
     // but skip for /auth/me which checks silently on start
-    if (response?.data && (response.data as any).message && originalRequest?.url !== '/auth/me') {
+    // also skip for /listings as the component handles the toast update itself
+    const isListings = originalRequest?.url?.includes('/listings');
+
+    if (response?.data && (response.data as any).message && originalRequest?.url !== '/auth/me' && !isListings) {
       toast.error((response.data as any).message);
     }
 

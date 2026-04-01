@@ -3,6 +3,44 @@ import { catchAsync } from "../../shared/utils/catchAsync";
 import { AppError } from "../../shared/errors/AppError";
 import User from "./user.model";
 import Listing from "../listing/listing.model";
+import { uploadToCloudinary } from "../../shared/services/cloudinary.service";
+
+/**
+ * @desc    User: Update profile
+ * @route   PATCH /api/v1/users/profile
+ * @access  Private
+ */
+export const updateProfile = catchAsync(async (req: Request, res: Response) => {
+  const user = await User.findById((req as any).user._id);
+  if (!user) throw new AppError("User not found", 404);
+
+  const { name, phone, city } = req.body;
+  if (name) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (city !== undefined) user.city = city;
+
+  if (req.file) {
+    const fileUrl = await uploadToCloudinary(req.file.path, "royal-property-finder/users/profilePics");
+    user.profilePic = fileUrl;
+  }
+
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      profilePic: user.profilePic,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      city: user.city,
+    },
+  });
+});
 
 /**
  * @desc    Admin: Get all users with their listing counts

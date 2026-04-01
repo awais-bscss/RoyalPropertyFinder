@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/store";
+import {
+  addToCart as addToCartAction,
+  removeFromCart as removeFromCartAction,
+  setCartOpen as setCartOpenAction,
+  applyPromo as applyPromoAction,
+} from "@/store/slices/cartSlice";
 import {
   ShoppingBag,
   Zap,
@@ -13,6 +21,7 @@ import {
   Star,
   TrendingUp,
   Package,
+  PlusSquare,
   ShoppingCart,
   X,
   ChevronRight,
@@ -144,10 +153,48 @@ const badgeConfig: Record<string, { cls: string; icon: any }> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 export function PropsShop() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<Product[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
+
+  const cart = useSelector((state: RootState) => state.cart.items);
+  const cartOpen = useSelector((state: RootState) => state.cart.isOpen);
+  const [bundleModalOpen, setBundleModalOpen] = useState(false);
+
+  // Sync body scroll with cart state - more aggressive lock
+  useEffect(() => {
+    const elements = [document.body, document.documentElement];
+    if (cartOpen || bundleModalOpen) {
+      elements.forEach((el) => {
+        el.style.overflow = "hidden";
+        el.style.height = "100%";
+      });
+    } else {
+      elements.forEach((el) => {
+        el.style.overflow = "";
+        el.style.height = "";
+      });
+    }
+    return () => {
+      elements.forEach((el) => {
+        el.style.overflow = "";
+        el.style.height = "";
+      });
+    };
+  }, [cartOpen, bundleModalOpen]);
+
+  const bundleItems = [
+    products.find((p) => p.id === 1), // Featured Boost
+    products.find((p) => p.id === 2), // Photography
+    products.find((p) => p.id === 5), // Social Promotion
+  ].filter(Boolean) as Product[];
+
+  const addBundleToCart = () => {
+    bundleItems.forEach((item) => addToCart(item));
+    dispatch(applyPromoAction({ code: "ROYAL30", rate: 0.3 }));
+    setBundleModalOpen(false);
+    setCartOpen(true);
+  };
 
   const filtered = products.filter((p) => {
     const matchCat = category === "All" || p.category === category;
@@ -156,13 +203,23 @@ export function PropsShop() {
   });
 
   const addToCart = (product: Product) => {
-    if (!cart.find((c) => c.id === product.id)) {
-      setCart((prev) => [...prev, product]);
-    }
+    dispatch(
+      addToCartAction({
+        id: product.id,
+        name: product.name,
+        desc: product.desc,
+        price: product.price,
+        category: product.category,
+      }),
+    );
   };
 
   const removeFromCart = (id: number) => {
-    setCart((prev) => prev.filter((c) => c.id !== id));
+    dispatch(removeFromCartAction(id));
+  };
+
+  const setCartOpen = (open: boolean) => {
+    dispatch(setCartOpenAction(open));
   };
 
   const cartTotal = cart.reduce((s, p) => s + p.price, 0);
@@ -205,10 +262,10 @@ export function PropsShop() {
           return (
             <div
               key={c.label}
-              className="bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-700 px-5 py-3 flex items-center gap-4"
+              className="bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4"
             >
               <div
-                className={`w-10 h-10 rounded-sm flex items-center justify-center text-white bg-linear-to-r ${c.iconBg} shrink-0`}
+                className={`w-10 h-10 rounded-md flex items-center justify-center text-white bg-linear-to-r ${c.iconBg} shrink-0`}
               >
                 <Icon className="w-4 h-4" />
               </div>
@@ -242,7 +299,7 @@ export function PropsShop() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/dashboard/buy-product")}
+            onClick={() => setBundleModalOpen(true)}
             className="shrink-0 flex items-center gap-1.5 bg-white text-royal-800 font-bold text-[12.5px] px-4 py-2.5 rounded-sm hover:bg-royal-50 transition-colors cursor-pointer whitespace-nowrap"
           >
             View Bundle <ArrowUpRight className="w-3.5 h-3.5" />
@@ -331,11 +388,11 @@ export function PropsShop() {
                     className="bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-700 p-4 flex flex-col hover:border-royal-300 dark:hover:border-royal-500/40 transition-colors"
                   >
                     {/* Top row: icon + badge */}
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center justify-between mb-4">
                       <div
-                        className={`w-10 h-10 rounded-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 ${product.iconBg}`}
+                        className={`w-10 h-10 rounded-md border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 ${product.iconBg}`}
                       >
-                        <Icon className={`w-4.5 h-4.5 ${product.iconColor}`} />
+                        <Icon className={`w-5 h-5 ${product.iconColor}`} />
                       </div>
                       {badge && BadgeIcon && (
                         <span
@@ -400,23 +457,147 @@ export function PropsShop() {
         </div>
       </div>
 
+      {/* ── Bundle Offer Modal ────────────────────────────────────── */}
+      {bundleModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden h-screen w-screen"
+            style={{ height: "100dvh" }}
+            onClick={() => setBundleModalOpen(false)}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-sm border border-slate-200 dark:border-slate-700 shadow-2xl overflow-y-auto max-h-[90vh] animate-in fade-in zoom-in duration-200 custom-scrollbar"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-linear-to-r from-royal-700 to-royal-900 p-6 text-white relative">
+                <div className="absolute top-4 right-4">
+                  <button
+                    onClick={() => setBundleModalOpen(false)}
+                    className="p-1.5 rounded-sm hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-royal-200 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">
+                  Limited Time Exclusive
+                </p>
+                <h3 className="text-xl font-black tracking-tight">
+                  Premium Growth Bundle
+                </h3>
+                <p className="text-royal-100/70 text-[13px] mt-2 leading-relaxed">
+                  The ultimate toolkit to get your property noticed by thousands
+                  of potential buyers in hours.
+                </p>
+              </div>
+
+              {/* Items List */}
+              <div className="p-6 space-y-4">
+                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  What's included:
+                </p>
+                {bundleItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 group"
+                    >
+                      <div
+                        className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${item.iconBg} border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform`}
+                      >
+                        <Icon className={`w-5 h-5 ${item.iconColor}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[14px] font-bold text-slate-800 dark:text-white">
+                          {item.name}
+                        </p>
+                        <p className="text-[11.5px] text-slate-400 leading-tight">
+                          {item.id === 1
+                            ? "Premium search ranking"
+                            : item.id === 2
+                              ? "Professional HD shoot"
+                              : "Multi-platform exposure"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[13px] font-bold text-slate-700 dark:text-slate-300">
+                          PKR {item.price.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[14px] text-slate-500 font-medium">
+                      Regular Price
+                    </span>
+                    <span className="text-[14px] text-slate-400 line-through">
+                      PKR{" "}
+                      {bundleItems
+                        .reduce((s, i) => s + i.price, 0)
+                        .toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[15px] font-bold text-slate-800 dark:text-white">
+                        Bundle Price
+                      </span>
+                      <p className="text-[11px] text-emerald-600 font-bold uppercase">
+                        You save 30%
+                      </p>
+                    </div>
+                    <span className="text-[20px] font-black text-royal-700 dark:text-royal-400">
+                      PKR{" "}
+                      {Math.round(
+                        bundleItems.reduce((s, i) => s + i.price, 0) * 0.7,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action */}
+              <div className="p-6 pt-0">
+                <button
+                  onClick={addBundleToCart}
+                  className="w-full bg-royal-600 hover:bg-royal-700 text-white font-bold py-3.5 rounded-sm transition-all flex items-center justify-center gap-2 group cursor-pointer shadow-lg shadow-royal-500/20"
+                >
+                  <PlusSquare className="w-5 h-5" />
+                  Claim Bundle Offer
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <p className="text-center text-[10.5px] text-slate-400 mt-3">
+                  * Discount applied automatically at checkout with code{" "}
+                  <span className="text-royal-600 font-bold">ROYAL30</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Cart Side Panel ───────────────────────────────────────── */}
       {cartOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-sm transition-all h-screen w-screen"
+            style={{ height: "100dvh" }}
             onClick={() => setCartOpen(false)}
           />
-          <div className="fixed right-0 top-0 h-full w-[340px] z-50 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col shadow-2xl">
+          <div className="fixed right-0 inset-y-0 w-[360px] z-[101] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="flex items-center justify-between px-5 py-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 text-royal-600 dark:text-royal-400" />
                 <p className="font-semibold text-slate-800 dark:text-white text-sm">
                   Your Cart
                 </p>
                 {cart.length > 0 && (
-                  <span className="text-[10px] font-bold bg-royal-600 text-white px-1.5 py-0.5 rounded-full">
+                  <span className="w-5 h-5 flex items-center justify-center text-[10px] font-bold bg-royal-600 text-white rounded-full leading-none">
                     {cart.length}
                   </span>
                 )}
@@ -430,7 +611,7 @@ export function PropsShop() {
             </div>
 
             {/* Cart items */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            <div className="flex-1 overflow-y-auto p-5 py-4 space-y-4">
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-48 text-slate-400">
                   <ShoppingCart className="w-10 h-10 opacity-20 mb-3" />
@@ -441,16 +622,31 @@ export function PropsShop() {
                 </div>
               ) : (
                 cart.map((item) => {
-                  const Icon = item.icon;
+                  const config =
+                    badgeConfig[
+                      item.id === 1
+                        ? "Hot"
+                        : item.id === 2
+                          ? "Popular"
+                          : item.id === 3
+                            ? "New"
+                            : "Best Value"
+                    ];
+                  // Simplified mapping for the side panel, or use the centralized itemUIConfigs if we want to be perfect
+                  const productRef = products.find((p) => p.id === item.id);
+                  const Icon = productRef?.icon || Package;
+
                   return (
                     <div
                       key={item.id}
                       className="flex items-center gap-3 p-3 rounded-sm border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30"
                     >
                       <div
-                        className={`w-9 h-9 rounded-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 ${item.iconBg}`}
+                        className={`w-9 h-9 rounded-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 ${productRef?.iconBg || "bg-slate-100"}`}
                       >
-                        <Icon className={`w-4 h-4 ${item.iconColor}`} />
+                        <Icon
+                          className={`w-4 h-4 ${productRef?.iconColor || "text-royal-600"}`}
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12.5px] font-semibold text-slate-800 dark:text-white truncate">

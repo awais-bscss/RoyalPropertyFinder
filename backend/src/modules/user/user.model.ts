@@ -13,6 +13,12 @@ export interface IUser extends Document {
   role: "user" | "admin" | "agent";
   createdAt: Date;
   updatedAt: Date;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
+  isEmailVerified: boolean;
+  city?: string;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -47,22 +53,50 @@ const userSchema = new Schema<IUser>(
     googleId: {
       type: String,
       unique: true,
-      sparse: true, // Allows multiple null values without triggering unique constraint error
+      sparse: true, // Allows multiple null values
+      select: false,
     },
     facebookId: {
       type: String,
       unique: true,
       sparse: true,
+      select: false,
     },
     authProvider: {
       type: String,
       enum: ["email", "google", "facebook"],
       default: "email",
+      select: false,
     },
     role: {
       type: String,
       enum: ["user", "admin", "agent"],
       default: "user",
+    },
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    city: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
     },
   },
   {

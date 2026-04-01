@@ -19,7 +19,10 @@ export const metadata: Metadata = {
   },
 };
 
-import { Toaster } from "@/components/ui/sonner";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { AuthToastWatcher } from "@/components/auth/AuthToastWatcher";
+import { Suspense } from "react";
 
 export default function RootLayout({
   children,
@@ -39,8 +42,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <Suspense fallback={null}>
+               <AuthToastWatcher />
+            </Suspense>
             {children}
-            <Toaster position="top-right" richColors />
+            <ToastContainer position="top-right" autoClose={3000} theme="colored" />
           </ThemeProvider>
         </ReduxProvider>
       </body>

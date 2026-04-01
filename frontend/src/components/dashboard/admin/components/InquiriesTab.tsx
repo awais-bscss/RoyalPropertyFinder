@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import {
   CheckCircle2,
   Clock,
@@ -10,6 +10,15 @@ import {
   Search,
   Loader2,
   Trash2,
+  Star,
+  Paperclip,
+  Send,
+  MoreVertical,
+  Building2,
+  Inbox as InboxIcon,
+  Circle,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import { INQUIRY_STATUS, INQUIRY_TYPES, timeAgo } from "../types";
 import type { SupportInquiry } from "../types";
@@ -22,13 +31,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DeleteInquiryModal } from "./DeleteInquiryModal";
+
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const getAvatarBg = (name: string) => {
+  const colors = [
+    "bg-royal-600",
+    "bg-emerald-600",
+    "bg-violet-600",
+    "bg-amber-600",
+    "bg-rose-500",
+    "bg-blue-600",
+    "bg-indigo-600",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 export function InquiriesTab() {
   const [inquiries, setInquiries] = useState<SupportInquiry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<
+    "all" | "open" | "in_progress" | "resolved"
+  >("all");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [reply, setReply] = useState("");
@@ -122,7 +167,6 @@ export function InquiriesTab() {
       if (res.success) {
         toast.success("Reply sent to user's email");
         setReply("");
-        // Refresh inquiries to show status change if any
         fetchInquiries();
       }
     } catch (err) {
@@ -132,6 +176,11 @@ export function InquiriesTab() {
     }
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
+
   const handleDeletePrompt = () => {
     if (!activeId) return;
     setShowDeleteModal(true);
@@ -139,7 +188,6 @@ export function InquiriesTab() {
 
   const confirmDelete = async () => {
     if (!activeId) return;
-
     try {
       setDeleting(true);
       const res = await InquiryService.deleteInquiry(activeId);
@@ -157,60 +205,92 @@ export function InquiriesTab() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)] min-h-[600px]">
-      {/* ── Left Sidebar (Inbox List) ── */}
-      <div className="w-full md:w-[320px] lg:w-[380px] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shrink-0 overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search inbox..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-royal-400"
-              />
-            </div>
-
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-[110px] h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 focus:ring-0 focus:ring-offset-0 hover:border-royal-300 transition-all">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent
-                position="popper"
-                sideOffset={4}
-                className="w-[160px] rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl"
+    <div className="flex h-[calc(100vh-130px)] bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+      {/* ── Left panel: inquiry list ─────────────────────────── */}
+      <div className="w-[320px] md:w-[380px] shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-700">
+        {/* Header */}
+        <div className="px-4 py-3.5 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[16px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <InboxIcon className="w-5 h-5 text-royal-600" />
+              Inquiries
+              <span className="flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-royal-600 text-white rounded-full">
+                {inquiries.filter((inq) => inq.status !== "resolved").length}
+              </span>
+            </h2>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                side="bottom"
+                sideOffset={8}
+                className="w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold text-[12px]"
               >
-                <SelectItem value="all" className="text-[12px] font-bold py-2">
-                  All Inquiries
-                </SelectItem>
-                <SelectItem value="open" className="text-[12px] font-bold py-2">
-                  Needs Reply
-                </SelectItem>
-                <SelectItem
-                  value="in_progress"
-                  className="text-[12px] font-bold py-2"
+                <DropdownMenuLabel className="text-[11px] uppercase tracking-widest text-slate-400">
+                  Sidebar Actions
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
+                <DropdownMenuItem
+                  onClick={() => fetchInquiries()}
+                  className="cursor-pointer focus:bg-royal-50 dark:focus:bg-royal-500/10 focus:text-royal-600 py-2"
                 >
-                  In Progress
-                </SelectItem>
-                <SelectItem
-                  value="resolved"
-                  className="text-[12px] font-bold py-2"
+                  <Loader2 className="mr-2 h-4 w-4" />
+                  Refresh List
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer focus:bg-royal-50 dark:focus:bg-royal-500/10 focus:text-royal-600 py-2"
+                  onClick={() => setSearch("")}
                 >
-                  Resolved
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                  <Search className="mr-2 h-4 w-4" />
+                  Clear Search
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search inquiries..."
+              className="w-full pl-9 pr-3 py-2.5 text-[14px] font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-royal-400 transition-colors"
+            />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+        {/* Filter tabs */}
+        <div className="flex border-b border-slate-200 dark:border-slate-700">
+          {(["all", "open", "in_progress", "resolved"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`flex-1 py-2 text-[11px] font-bold capitalize transition-colors cursor-pointer border-r last:border-r-0 border-slate-100 dark:border-slate-800 ${
+                filter === f
+                  ? "text-royal-600 border-b-2 border-b-royal-600"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              {f === "in_progress" ? "Working" : f}
+            </button>
+          ))}
+        </div>
+
+        {/* Inquiry list */}
+        <div className="flex-1 overflow-y-auto">
           {loading ? (
             Array(5)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="p-4 space-y-3">
+                <div
+                  key={i}
+                  className="p-4 border-b border-slate-50 dark:border-slate-800 space-y-3"
+                >
                   <div className="flex justify-between">
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-3 w-12" />
@@ -223,324 +303,324 @@ export function InquiriesTab() {
                 </div>
               ))
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-slate-400 text-center">
-              <MessageSquare className="w-10 h-10 mb-3 opacity-30" />
-              <p className="text-[13px] font-semibold">No inquiries found</p>
-              <p className="text-[11px]">Inbox is clear!</p>
+            <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
+              <MessageSquare className="w-8 h-8 mb-2 opacity-30" />
+              No inquiries found
             </div>
           ) : (
-            filtered.map((inq) => {
-              const typeCfg = INQUIRY_TYPES[inq.type];
-              const statCfg = INQUIRY_STATUS[inq.status];
-              const isActive = activeId === inq._id;
-
-              return (
-                <button
-                  key={inq._id}
-                  onClick={() => setActiveId(inq._id)}
-                  className={`w-full text-left p-4 transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-royal-50/50 dark:bg-slate-800/50"
-                      : "hover:bg-slate-50 dark:hover:bg-slate-800/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-1.5">
-                    <span className="text-[13px] font-bold text-slate-900 dark:text-white truncate">
-                      {inq.senderName}
-                    </span>
-                    <span className="text-[10px] whitespace-nowrap text-slate-400 font-medium">
-                      {timeAgo(inq.createdAt)}
-                    </span>
+            filtered.map((inq) => (
+              <button
+                key={inq._id}
+                onClick={() => setActiveId(inq._id)}
+                className={`w-full text-left px-4 py-3.5 border-b border-slate-50 dark:border-slate-800 transition-colors cursor-pointer ${
+                  activeId === inq._id
+                    ? "bg-royal-50 dark:bg-royal-500/10"
+                    : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  {/* Avatar */}
+                  <div
+                    className={`w-8 h-8 rounded-full ${getAvatarBg(inq.senderName)} flex items-center justify-center text-white text-[10px] font-bold shrink-0 mt-0.5`}
+                  >
+                    {getInitials(inq.senderName)}
                   </div>
-                  <p className="text-[12px] text-slate-600 dark:text-slate-300 font-semibold truncate mb-2">
-                    {inq.subject}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${typeCfg.color}`}
-                    >
-                      {typeCfg.label}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${statCfg.cls}`}
-                    >
-                      {statCfg.label}
-                    </span>
-                    <div className="ml-auto flex items-center gap-1.5">
-                      {inq.priority === "high" && (
-                        <span
-                          className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"
-                          title="High Priority"
-                        />
-                      )}
-                      {inq.priority === "medium" && (
-                        <span
-                          className="w-2 h-2 rounded-full bg-amber-400"
-                          title="Medium Priority"
-                        />
-                      )}
-                      {inq.priority === "low" && (
-                        <span
-                          className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700"
-                          title="Low Priority"
-                        />
-                      )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <span
+                        className={`text-[14px] truncate ${inq.status === "open" ? "font-bold text-slate-900 dark:text-white" : "font-semibold text-slate-700 dark:text-slate-300"}`}
+                      >
+                        {inq.senderName}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap shrink-0">
+                        {timeAgo(inq.createdAt)}
+                      </span>
                     </div>
+                    <p
+                      className={`text-[13px] font-medium truncate ${inq.status === "open" ? "text-slate-800 dark:text-slate-200" : "text-slate-600 dark:text-slate-400"}`}
+                    >
+                      {inq.subject}
+                    </p>
+                    <p className="text-[12px] text-slate-500 truncate mt-1">
+                      {inq.message}
+                    </p>
                   </div>
-                </button>
-              );
-            })
+                </div>
+                <div className="flex items-center justify-between mt-1.5 ml-10">
+                  <div className="flex items-center gap-1.5">
+                    {inq.status === "open" && (
+                      <Circle className="w-2 h-2 fill-royal-600 text-royal-600" />
+                    )}
+                    {inq.priority === "high" && (
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    )}
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${INQUIRY_TYPES[inq.type].color}`}
+                    >
+                      {INQUIRY_TYPES[inq.type].label}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${INQUIRY_STATUS[inq.status].cls}`}
+                  >
+                    {INQUIRY_STATUS[inq.status].label}
+                  </span>
+                </div>
+              </button>
+            ))
           )}
         </div>
       </div>
 
-      {/* ── Right Pane (Active Inquiry Detail) ── */}
-      <div className="flex-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm min-h-[500px]">
-        {activeInquiry ? (
-          <>
-            {/* Thread Header */}
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-[18px] font-black text-slate-900 dark:text-white mb-2">
-                    {activeInquiry?.subject}
-                  </h2>
-                  <div className="flex items-center gap-4 text-[13px] text-slate-500 font-medium">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="w-4 h-4" />
-                      {activeInquiry?.senderEmail}
-                    </div>
-                    {activeInquiry?.senderPhone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="w-4 h-4" />
-                        {activeInquiry.senderPhone}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {/* Delete Button */}
-                  <div className="flex flex-col items-center">
-                    {activeInquiry?.status === "resolved" && (
-                      <span className="text-[9px] bg-rose-50 dark:bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded-full font-black mb-1.5 border border-rose-100 dark:border-rose-500/20 shadow-sm uppercase tracking-tighter shadow-rose-500/5 transition-all">
-                        DONE! DELETE 👋
-                      </span>
-                    )}
-                    <button
-                      onClick={handleDeletePrompt}
-                      disabled={deleting}
-                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer disabled:opacity-50 group"
-                      title="Delete Inquiry"
-                    >
-                      {deleting ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="h-8 w-px bg-slate-100 dark:bg-slate-800" />
-
-                  {/* Status Dropdown */}
-                  <div className="shrink-0 flex items-center gap-2">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest hidden md:block">
-                      Status
-                    </p>
-                    <div className="relative">
-                      <Select
-                        value={activeInquiry?.status}
-                        onValueChange={(val) => handleStatusChange(val as any)}
-                        disabled={updating}
-                      >
-                        <SelectTrigger className="w-[160px] h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] font-bold text-slate-700 dark:text-slate-300 focus:ring-0 focus:ring-offset-0 cursor-pointer hover:border-royal-300 transition-all">
-                          <SelectValue placeholder="Select Status" />
-                        </SelectTrigger>
-                        <SelectContent
-                          position="popper"
-                          sideOffset={4}
-                          className="w-[180px] rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden"
-                        >
-                          <SelectItem
-                            value="open"
-                            className="font-bold text-slate-700 dark:text-slate-300 py-2.5"
-                          >
-                            Needs Reply
-                          </SelectItem>
-                          <SelectItem
-                            value="in_progress"
-                            className="font-bold text-slate-700 dark:text-slate-300 py-2.5"
-                          >
-                            In Progress
-                          </SelectItem>
-                          <SelectItem
-                            value="resolved"
-                            className="font-bold text-slate-700 dark:text-slate-300 py-2.5"
-                          >
-                            Resolved / Closed
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {updating && (
-                        <div className="absolute -right-1 -top-1">
-                          <span className="flex h-3 w-3 relative">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-royal-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-royal-500"></span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="h-8 w-px bg-slate-100 dark:bg-slate-800" />
-
-                  {/* Priority Dropdown */}
-                  <div className="shrink-0 flex items-center gap-2">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest hidden lg:block">
-                      Priority
-                    </p>
-                    <div className="relative">
-                      <Select
-                        value={activeInquiry?.priority}
-                        onValueChange={(val) =>
-                          handlePriorityChange(val as any)
-                        }
-                        disabled={updating}
-                      >
-                        <SelectTrigger className="w-[100px] h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] font-bold text-slate-700 dark:text-slate-300 focus:ring-0 focus:ring-offset-0 cursor-pointer hover:border-royal-300 transition-all">
-                          <SelectValue placeholder="Priority" />
-                        </SelectTrigger>
-                        <SelectContent
-                          position="popper"
-                          sideOffset={4}
-                          className="w-[140px] rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden"
-                        >
-                          <SelectItem
-                            value="low"
-                            className="font-bold text-slate-500 py-2.5"
-                          >
-                            Low
-                          </SelectItem>
-                          <SelectItem
-                            value="medium"
-                            className="font-bold text-amber-500 py-2.5"
-                          >
-                            Medium
-                          </SelectItem>
-                          <SelectItem
-                            value="high"
-                            className="font-bold text-rose-600 py-2.5"
-                          >
-                            High
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {updating && (
-                        <div className="absolute -right-1 -top-1">
-                          <span className="flex h-3 w-3 relative">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-royal-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-royal-500"></span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="h-8 w-px bg-slate-100 dark:bg-slate-800" />
-                </div>
+      {/* ── Right panel: message thread ────────────────────────────── */}
+      {activeInquiry ? (
+        <div className="flex-1 flex flex-col min-w-0 bg-slate-50/20 dark:bg-slate-900/40">
+          {/* Thread header */}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-full ${getAvatarBg(activeInquiry.senderName)} flex items-center justify-center text-white text-[13px] font-bold shrink-0`}
+              >
+                {getInitials(activeInquiry.senderName)}
               </div>
-            </div>
-
-            {/* Message Thread */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-900/20">
-              {/* Original Message bubble */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl rounded-tl-sm p-4 w-fit max-w-[90%] shadow-sm">
-                <div className="flex justify-between items-center gap-8 mb-2 border-b border-slate-100 dark:border-slate-700/50 pb-2">
-                  <span className="font-bold text-[14px] text-slate-900 dark:text-white">
-                    {activeInquiry?.senderName}
-                  </span>
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    {activeInquiry &&
-                      new Date(activeInquiry.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-[14px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  {activeInquiry?.message}
+              <div>
+                <p className="text-[16px] font-bold text-slate-900 dark:text-white">
+                  {activeInquiry.senderName}
                 </p>
+                <div className="flex items-center gap-3 text-[12px] font-medium text-slate-500 mt-0.5">
+                  <div className="flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{activeInquiry.senderEmail}</span>
+                  </div>
+                  {activeInquiry.senderPhone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{activeInquiry.senderPhone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Select
+                  value={activeInquiry.status}
+                  onValueChange={(val) => handleStatusChange(val as any)}
+                  disabled={updating}
+                >
+                  <SelectTrigger className="h-8 w-[140px] text-[11px] font-bold border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    sideOffset={8}
+                    className="text-[12px] font-bold"
+                  >
+                    <SelectItem value="open">Needs Reply</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={activeInquiry.priority}
+                  onValueChange={(val) => handlePriorityChange(val as any)}
+                  disabled={updating}
+                >
+                  <SelectTrigger className="h-8 w-[100px] text-[11px] font-bold border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    sideOffset={8}
+                    className="text-[12px] font-bold"
+                  >
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium" className="text-amber-600">
+                      Medium
+                    </SelectItem>
+                    <SelectItem value="high" className="text-rose-600">
+                      High
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Real Admin Replies */}
-              {activeInquiry.replies?.map((reply, index) => (
-                <div key={index} className="flex flex-col items-end mt-6">
-                  <div className="bg-royal-600 text-white rounded-xl rounded-tr-sm p-4 w-fit max-w-[90%] shadow-lg shadow-royal-500/10">
-                    <div className="flex justify-between items-center gap-8 mb-2 border-b border-white/20 pb-2">
-                      <span className="font-bold text-[14px]">
-                        {reply.adminName} (Admin)
-                      </span>
-                      <span className="text-[11px] font-semibold opacity-80">
-                        {new Date(reply.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap">
-                      {reply.message}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
 
-              {/* Fake System Notice if resolved */}
-              {activeInquiry?.status === "resolved" && (
-                <div className="flex items-center gap-2 justify-center mt-6 text-emerald-600 font-bold text-[12px] bg-emerald-50 dark:bg-emerald-500/10 py-2 rounded-lg max-w-[80%] mx-auto shadow-sm">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Ticket closed by Admin
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-2 rounded-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  side="bottom"
+                  sideOffset={8}
+                  className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold text-[12px]"
+                >
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-widest text-slate-400">
+                    Inquiry Actions
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
+
+                  <DropdownMenuItem
+                    className="cursor-pointer focus:bg-royal-50 dark:focus:bg-royal-500/10 focus:text-royal-600 py-2.5"
+                    onClick={() =>
+                      copyToClipboard(activeInquiry.senderEmail, "Email")
+                    }
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Copy Email Address
+                  </DropdownMenuItem>
+
+                  {activeInquiry.senderPhone && (
+                    <DropdownMenuItem
+                      className="cursor-pointer focus:bg-royal-50 dark:focus:bg-royal-500/10 focus:text-royal-600 py-2.5"
+                      onClick={() =>
+                        copyToClipboard(activeInquiry.senderPhone!, "Phone")
+                      }
+                    >
+                      <Phone className="mr-2 h-4 w-4" />
+                      Copy Phone Number
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
+
+                  <DropdownMenuItem
+                    variant="destructive"
+                    className="cursor-pointer py-2.5 text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-500/10 focus:text-rose-600"
+                    onClick={handleDeletePrompt}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Inquiry
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Subject bar */}
+          <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-white/60 dark:bg-slate-900/30">
+            <div className="flex items-center justify-between">
+              <p className="text-[14px] font-bold text-slate-800 dark:text-slate-200">
+                {activeInquiry.subject}
+              </p>
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${INQUIRY_STATUS[activeInquiry.status].cls}`}
+              >
+                {INQUIRY_STATUS[activeInquiry.status].label}
+              </span>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
+            {/* Initial Inquiry Message */}
+            <div className="flex gap-3">
+              <div
+                className={`w-9 h-9 rounded-full ${getAvatarBg(activeInquiry.senderName)} flex items-center justify-center text-white text-[12px] font-bold shrink-0 mt-0.5`}
+              >
+                {getInitials(activeInquiry.senderName)}
+              </div>
+              <div className="max-w-[75%] items-start flex flex-col gap-1.5">
+                <div className="px-4 py-3 rounded-sm text-[14px] leading-relaxed bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm">
+                  {activeInquiry.message}
                 </div>
-              )}
+                <span className="text-[11px] font-medium text-slate-500">
+                  {new Date(activeInquiry.createdAt).toLocaleString()}
+                </span>
+              </div>
             </div>
 
-            {/* Reply Box */}
-            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-              <div className="relative">
-                <textarea
-                  placeholder={
-                    activeInquiry?.status === "resolved"
-                      ? "Ticket is closed. Re-open to reply."
-                      : "Type your reply directly to the user's email..."
-                  }
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  disabled={
-                    activeInquiry?.status === "resolved" || sendingReply
-                  }
-                  className="w-full h-24 p-3 pr-24 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[14px] resize-none focus:outline-none focus:border-royal-400 disabled:opacity-50 disabled:bg-slate-100"
-                />
+            {/* Admin Replies */}
+            {activeInquiry.replies?.map((rep, idx) => (
+              <div key={idx} className="flex gap-3 flex-row-reverse">
+                <div className="w-9 h-9 rounded-full bg-royal-600 flex items-center justify-center text-white text-[11px] font-bold shrink-0 mt-0.5 shadow-md shadow-royal-500/20">
+                  <User className="w-4 h-4" />
+                </div>
+                <div className="max-w-[75%] items-end flex flex-col gap-1.5">
+                  <div className="px-4 py-3 rounded-sm text-[14px] leading-relaxed bg-royal-600 text-white shadow-md shadow-royal-500/10">
+                    <p className="font-bold text-[11px] mb-1 opacity-80 border-b border-white/20 pb-0.5">
+                      {rep.adminName} (Admin)
+                    </p>
+                    {rep.message}
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    {new Date(rep.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {activeInquiry.status === "resolved" && (
+              <div className="flex items-center gap-2 justify-center text-emerald-600 font-bold text-[12px] bg-emerald-50 dark:bg-emerald-500/10 py-2.5 rounded-sm border border-emerald-100 dark:border-emerald-500/20 max-w-[300px] mx-auto">
+                <CheckCircle2 className="w-4 h-4" />
+                This inquiry has been resolved
+              </div>
+            )}
+          </div>
+
+          {/* Reply box */}
+          <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
+            <div
+              className={`flex items-end gap-3 border border-slate-200 dark:border-slate-700 rounded-sm p-3 bg-white dark:bg-slate-950 focus-within:border-royal-400 transition-colors ${activeInquiry.status === "resolved" ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <textarea
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                placeholder={
+                  activeInquiry.status === "resolved"
+                    ? "Inquiry is resolved"
+                    : "Write a reply to the user..."
+                }
+                rows={2}
+                disabled={activeInquiry.status === "resolved" || sendingReply}
+                className="flex-1 resize-none text-[14px] font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-500 bg-transparent focus:outline-none"
+              />
+              <div className="flex items-center gap-2 shrink-0">
+                <button className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                  <Paperclip className="w-5 h-5" />
+                </button>
                 <button
-                  disabled={
-                    activeInquiry?.status === "resolved" ||
-                    sendingReply ||
-                    !reply.trim()
-                  }
                   onClick={handleReply}
-                  className="absolute bottom-3 right-3 px-4 py-2 bg-royal-600 hover:bg-royal-700 disabled:opacity-50 text-white font-bold text-[13px] rounded-lg transition-colors cursor-pointer shadow-md shadow-royal-500/20"
+                  disabled={!reply.trim() || sendingReply}
+                  className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[14px] font-bold px-4 py-2 rounded-sm transition-colors cursor-pointer shadow-lg shadow-royal-500/10"
                 >
                   {sendingReply ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Send Reply"
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send
+                    </>
                   )}
                 </button>
               </div>
             </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400">
-            <Mail className="w-12 h-12 mb-4 opacity-30" />
-            <p className="font-semibold text-slate-500">
-              Select an inquiry to read
+          </div>
+        </div>
+      ) : (
+        /* Empty state */
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-8 bg-slate-50/30 dark:bg-slate-900/50">
+          <div className="w-16 h-16 rounded-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
+            <InboxIcon className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+          </div>
+          <div>
+            <p className="text-[16px] font-bold text-slate-800 dark:text-slate-200">
+              Select an inquiry
+            </p>
+            <p className="text-[14px] text-slate-500 mt-1 max-w-[240px]">
+              Choose weight from the list to view common inquiries and support
+              tickets.
             </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && activeInquiry && (

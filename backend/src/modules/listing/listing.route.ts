@@ -12,7 +12,7 @@ import {
   adminGetStats,
   adminToggleRoyalProject,
 } from "./listing.controller";
-import { protect } from "../../api/middlewares/auth.middleware";
+import { protect, requireVerified } from "../../api/middlewares/auth.middleware";
 import { requireAdmin } from "../../api/middlewares/admin.middleware";
 import { upload } from "../../shared/utils/multer";
 
@@ -31,9 +31,11 @@ router.patch("/admin/:id/royal-project", protect, requireAdmin, adminToggleRoyal
 // ── Protected user routes ─────────────────────────────────────────────────────
 router.use(protect);
 router.get("/me/properties", getMyListings);
-router.post("/", upload.array("images", 20), createListing);
+router.post("/", requireVerified, upload.fields([{ name: "images", maxCount: 20 }, { name: "videos", maxCount: 3 }]), createListing);
 router.delete("/:id", deleteListing);
-router.patch("/:id", upload.array("images", 20), updateListing);
+router.patch("/:id", requireVerified, upload.fields([{ name: "images", maxCount: 20 }, { name: "videos", maxCount: 3 }]), updateListing);
+
+
 
 // ── Public single listing ─────────────────────────────────────────────────────
 router.get("/:id", getListingById);

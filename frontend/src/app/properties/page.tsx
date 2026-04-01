@@ -19,6 +19,7 @@ import {
 import { FilterSelect } from "@/components/features/new-projects/FilterSelect";
 import bgImage from "@/assets/bg-new-projects-sm.webp";
 import apiClient from "@/lib/axios";
+import { formatPrice } from "@/lib/utils";
 
 // Static dummy properties (fallback while loading or if no data)
 const PROPERTIES = [
@@ -420,8 +421,9 @@ export default function PropertiesPage() {
                     "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80";
 
               return (
-                <div
+                <Link
                   key={id}
+                  href={`/properties/${id}`}
                   className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm transition-all cursor-pointer group flex flex-col h-full border border-slate-200/60 dark:border-slate-800/80 hover:shadow-xl hover:border-transparent dark:hover:border-transparent"
                 >
                   {/* Image Section */}
@@ -444,7 +446,7 @@ export default function PropertiesPage() {
                   {/* Content Section */}
                   <div className="py-4 px-4 flex-1 flex flex-col">
                     <p className="text-[18px] md:text-[20px] font-extrabold text-slate-800 dark:text-white leading-tight mb-1">
-                      {price}
+                      {isRealListing ? formatPrice(prop.currency, prop.price) : price}
                     </p>
                     <h3 className="text-[16px] font-bold text-slate-900 dark:text-white group-hover:text-[#023E8A] transition-colors line-clamp-1 mb-1">
                       {title}
@@ -478,7 +480,7 @@ export default function PropertiesPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

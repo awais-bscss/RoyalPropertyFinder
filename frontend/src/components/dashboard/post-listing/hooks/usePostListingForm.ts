@@ -4,8 +4,11 @@ import { useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import apiClient from "@/lib/axios";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { listingSchema } from "@/lib/validations/listing";
+import { z } from "zod";
+
 
 export interface ListingInitialData {
   purpose?: string;
@@ -171,48 +174,138 @@ export function usePostListingForm(initialData?: ListingInitialData) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!title || !description || !price || !areaSize || !city || !location) {
-      toast.error("Please fill in all mandatory fields before submitting.");
+    // 1. Prepare data for validation
+    const validMobiles = mobileNumbers.filter(
+      (n): n is string => typeof n === "string" && n.trim().length > 0
+    );
+
+    const formDataForValidation = {
+      purpose,
+      propertyTypeTab,
+      subtype,
+      city,
+      province,
+      location,
+      lat,
+      lng,
+      areaSize,
+      areaUnit,
+      price,
+      currency,
+      installment,
+      readyForPossession,
+      bedrooms: bedrooms || null,
+      bathrooms: bathrooms || null,
+      selectedAmenities,
+      title,
+      description,
+      contactEmail,
+      mobileNumbers: validMobiles,
+      landline: landline || null,
+      images: [...existingImageUrls, ...images], // File[] + string[]
+      videoLinks,
+    };
+
+    // 2. Validate using Zod
+    const validationResult = listingSchema.safeParse(formDataForValidation);
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0].message;
+      toast.error(firstError);
       return;
     }
 
+
     const toastId = toast.loading("Submitting your property listing...");
+
     try {
       await apiClient.post("/listings", buildFormData(), {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success("Listing published successfully!", { id: toastId });
+      toast.update(toastId, { 
+        render: "Listing published successfully!", 
+        type: "success", 
+        isLoading: false, 
+        autoClose: 3000 
+      });
       router.push("/dashboard/property-listings");
     } catch (error: any) {
       console.error(error);
-      toast.error(
-        error?.message || "Failed to submit listing. Please check the form.",
-        { id: toastId }
-      );
+      toast.update(toastId, { 
+        render: error?.message || "Failed to submit listing. Please check the form.", 
+        type: "error", 
+        isLoading: false, 
+        autoClose: 5000 
+      });
     }
   };
 
   const handleUpdate = async (e: React.FormEvent, listingId: string) => {
     e.preventDefault();
 
-    if (!title || !description || !price || !areaSize || !city || !location) {
-      toast.error("Please fill in all mandatory fields before saving.");
+    // 1. Prepare data for validation
+    const validMobiles = mobileNumbers.filter(
+      (n): n is string => typeof n === "string" && n.trim().length > 0
+    );
+
+    const formDataForValidation = {
+      purpose,
+      propertyTypeTab,
+      subtype,
+      city,
+      province,
+      location,
+      lat,
+      lng,
+      areaSize,
+      areaUnit,
+      price,
+      currency,
+      installment,
+      readyForPossession,
+      bedrooms: bedrooms || null,
+      bathrooms: bathrooms || null,
+      selectedAmenities,
+      title,
+      description,
+      contactEmail,
+      mobileNumbers: validMobiles,
+      landline: landline || null,
+      images: [...existingImageUrls, ...images], // Combine existing + new for validation count/size
+      videoLinks,
+    };
+
+    // 2. Validate using Zod
+    const validationResult = listingSchema.safeParse(formDataForValidation);
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0].message;
+      toast.error(firstError);
       return;
     }
 
+
     const toastId = toast.loading("Saving changes...");
     try {
+
       await apiClient.patch(`/listings/${listingId}`, buildFormData(), {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success("Listing updated successfully!", { id: toastId });
+      toast.update(toastId, { 
+        render: "Listing updated successfully!", 
+        type: "success", 
+        isLoading: false, 
+        autoClose: 3000 
+      });
       router.push("/dashboard/property-listings");
     } catch (error: any) {
       console.error(error);
-      toast.error(
-        error?.message || "Failed to update listing. Please check the form.",
-        { id: toastId }
-      );
+      toast.update(toastId, { 
+        render: error?.message || "Failed to update listing. Please check the form.", 
+        type: "error", 
+        isLoading: false, 
+        autoClose: 5000 
+      });
     }
   };
 

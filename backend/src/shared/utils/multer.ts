@@ -24,13 +24,17 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const allowed = /jpeg|jpg|png|webp/;
-  const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mime = allowed.test(file.mimetype);
-  if (ext && mime) {
+  const allowedImages = /jpeg|jpg|png|webp/;
+  const allowedVideos = /mp4|mov|avi|mkv|webm/;
+  
+  const ext = path.extname(file.originalname).toLowerCase();
+  const isImage = allowedImages.test(ext) || allowedImages.test(file.mimetype);
+  const isVideo = allowedVideos.test(ext) || allowedVideos.test(file.mimetype);
+
+  if (isImage || isVideo) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files (jpeg, jpg, png, webp) are allowed"));
+    cb(new Error("Only image (jpeg, jpg, png, webp) or video (mp4, mov, avi, mkv, webm) files are allowed"));
   }
 };
 
@@ -38,7 +42,10 @@ export const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB per file
-    files: 20,                  // max 20 images
+    fileSize: 50 * 1024 * 1024, // 50 MB
+    files: 23,                    // 20 images + 3 videos
   },
 });
+
+
+

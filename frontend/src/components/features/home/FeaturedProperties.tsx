@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/axios";
+import { formatPrice } from "@/lib/utils";
 
 const PROPERTIES = [
   {
@@ -78,7 +79,7 @@ export function FeaturedProperties() {
     listings.length > 0 ? listings.slice(0, 3) : PROPERTIES;
 
   return (
-    <section className="py-12 bg-white dark:bg-slate-950 relative z-0">
+    <section className="py-12 relative z-0">
       <div className="container px-4 mx-auto">
         <div className="flex items-end justify-between mb-8">
           <div>
@@ -103,7 +104,7 @@ export function FeaturedProperties() {
             const id = isRealListing ? prop._id : prop.id;
             const title = prop.title;
             const price = isRealListing
-              ? `${prop.currency || "PKR"} ${prop.price}`
+              ? formatPrice(prop.currency, prop.price)
               : prop.price;
             const location = isRealListing
               ? `${prop.location}, ${prop.city}`
@@ -127,9 +128,10 @@ export function FeaturedProperties() {
                   "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80";
 
             return (
-              <div
+              <Link
                 key={id}
-                className="bg-transparent rounded-xl overflow-hidden transition-all cursor-pointer group flex flex-col h-full border border-slate-200/60 dark:border-slate-800/80 hover:shadow-xl hover:border-transparent dark:hover:border-transparent"
+                href={`/properties/${id}`}
+                className="bg-transparent rounded-xl overflow-hidden transition-all cursor-pointer group flex flex-col h-full"
               >
                 {/* Image Section */}
                 <div className="px-3 pt-3">
@@ -191,7 +193,7 @@ export function FeaturedProperties() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

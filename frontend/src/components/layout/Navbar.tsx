@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { Search, User, Menu, Plus, Home, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/theme-toggle";
@@ -13,7 +13,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { logoutAuth } from "@/store/slices/authSlice";
 import { AuthService } from "@/services/auth.service";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +51,16 @@ export function Navbar() {
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const currentTab = searchParams.get("tab");
+
+  const handleAddProperty = () => {
+    if (isAuthenticated) {
+      router.push("/dashboard/post-listing");
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
 
   const navItems = [
     { name: "BUY", href: "/?tab=buy", closable: false },
@@ -126,7 +135,8 @@ export function Navbar() {
 
             <Button
               size="sm"
-              className="h-6 bg-white text-black hover:bg-royal-50 font-bold border-none rounded pointer-events-auto px-4"
+              onClick={handleAddProperty}
+              className="h-6 bg-white text-black hover:bg-royal-50 font-bold border-none rounded pointer-events-auto px-4 cursor-pointer"
             >
               <Plus className="w-3 h-3 mr-1.5" /> Add Property
             </Button>
@@ -141,7 +151,7 @@ export function Navbar() {
                       aria-label="User menu"
                       className="cursor-pointer transition-colors -ml-1 focus:outline-none"
                     >
-                      <User className="w-5 h-5 text-[#F8F8F8]" />
+                      <User className="w-5 h-5 text-[#F8F8F8]" fill="currentColor" strokeWidth={2.5} />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent

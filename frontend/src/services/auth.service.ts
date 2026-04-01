@@ -29,5 +29,33 @@ export const AuthService = {
   // A generic logout ping to wipe cookies securely on Node level
   logout: async (): Promise<void> => {
     await apiClient.post("/auth/logout");
+  },
+  // Request a password reset link to be logged in console (mocked)
+  forgotPassword: async (email: string): Promise<any> => {
+    return await apiClient.post("/auth/forgot-password", { email });
+  },
+
+  // Update password with a valid token from URL
+  resetPassword: async (token: string, data: any): Promise<any> => {
+    return await apiClient.patch(`/auth/reset-password/${token}`, data);
+  },
+
+  // Update password for an authenticated user
+  updatePassword: async (data: any): Promise<any> => {
+    return await apiClient.patch("/auth/update-password", data);
+  },
+
+  // Update user profile information and profile picture
+  updateProfile: async (formData: FormData): Promise<any> => {
+    return await apiClient.patch("/users/profile", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  // Resend the email verification link
+  resendVerification: async (): Promise<any> => {
+    return await apiClient.post("/auth/resend-verification");
   }
 };

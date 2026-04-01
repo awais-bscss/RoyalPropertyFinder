@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { CheckCircle2, Save, Server, Shield, Sliders } from "lucide-react";
 
 export function ConfigTab() {

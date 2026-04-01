@@ -131,13 +131,6 @@ export const ROLE_CONFIG = {
   },
 };
 
-export function formatPrice(currency: string, value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency || "PKR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 export function timeAgo(dateInput: string | Date): string {
   const date = new Date(dateInput);

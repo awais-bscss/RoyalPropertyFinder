@@ -49,4 +49,12 @@ router.get(
 router.get("/me", protect, authController.getMe);
 router.post("/register", authController.register);
 router.post("/logout", authController.logout);
+
+// --- Password Recovery & Actions ---
+router.post("/forgot-password", authController.forgotPassword);
+router.patch("/reset-password/:token", authController.resetPassword);
+router.post("/resend-verification", protect, authController.resendVerification);
+router.get("/verify-email/:token", authController.verifyEmail);
+router.patch("/update-password", protect, authController.updatePassword);
+
 export default router;

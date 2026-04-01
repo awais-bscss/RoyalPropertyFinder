@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import apiClient from "@/lib/axios";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import {
   PlusSquare,
   Search,

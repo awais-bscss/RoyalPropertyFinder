@@ -35,3 +35,20 @@ export const protect = catchAsync(async (req: Request, res: Response, next: Next
   req.user = currentUser;
   next();
 });
+
+/**
+ * @desc    Restrict access to verified users only
+ */
+export const requireVerified = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  
+  // Hardcoded: Admin is always verified
+  if (user && user.role === "admin") {
+    return next();
+  }
+
+  if (!user || !user.isEmailVerified) {
+    return next(new AppError("Please verify your email address to unlock this feature.", 403));
+  }
+  next();
+};

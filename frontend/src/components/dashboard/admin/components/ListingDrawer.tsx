@@ -1,7 +1,8 @@
 "use client";
 
 import { CheckCircle2, Loader2, MapPin, X } from "lucide-react";
-import { LISTING_STATUS, formatPrice, timeAgo } from "../types";
+import { LISTING_STATUS, timeAgo } from "../types";
+import { formatPrice } from "@/lib/utils";
 import type { Listing } from "../types";
 
 interface Props {
