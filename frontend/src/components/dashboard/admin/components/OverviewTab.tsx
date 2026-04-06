@@ -430,13 +430,10 @@ export function OverviewTab({
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={[
-                    { name: "Mon", approved: 12, pending: 5 },
-                    { name: "Tue", approved: 19, pending: 8 },
-                    { name: "Wed", approved: 15, pending: 15 },
-                    { name: "Thu", approved: 22, pending: 4 },
-                    { name: "Fri", approved: 28, pending: 12 },
-                    { name: "Sat", approved: 35, pending: 18 },
-                    { name: "Sun", approved: 42, pending: 10 },
+                    { name: "Approved", approved: listingStats?.approved ?? 0, pending: 0 },
+                    { name: "Pending", approved: 0, pending: listingStats?.pending ?? 0 },
+                    { name: "Rejected", approved: 0, pending: listingStats?.rejected ?? 0 },
+                    { name: "Total", approved: listingStats?.total ?? 0, pending: 0 },
                   ]}
                   margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
                 >
@@ -528,12 +525,8 @@ export function OverviewTab({
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={[
-                    { name: "Jan", users: 400, agents: 240 },
-                    { name: "Feb", users: 300, agents: 139 },
-                    { name: "Mar", users: 200, agents: 980 },
-                    { name: "Apr", users: 278, agents: 390 },
-                    { name: "May", users: 189, agents: 480 },
-                    { name: "Jun", users: 239, agents: 380 },
+                    { name: "Total Users", users: platformStats?.totalUsers ?? 0, agents: 0 },
+                    { name: "New This Month", users: platformStats?.newUsersThisMonth ?? 0, agents: 0 },
                   ]}
                   margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
                   barSize={12}

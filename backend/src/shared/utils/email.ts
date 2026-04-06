@@ -5,6 +5,7 @@ interface EmailOptions {
   subject: string;
   message: string;
   html?: string;
+  attachments?: any[];
 }
 
 export const sendEmail = async (options: EmailOptions) => {
@@ -28,6 +29,7 @@ export const sendEmail = async (options: EmailOptions) => {
     text: options.message,
     html: options.html,
     replyTo: "noreply@royalpropertyfinder.com", // Prevents users from replying to the automated email
+    attachments: options.attachments,
   };
 
   // 3) Actually send the email

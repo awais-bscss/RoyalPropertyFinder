@@ -22,11 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InquiryService } from "@/services/inquiry.service";
+import SettingsService, { ISettings } from "@/services/settings.service";
 
 export function ContactSupport() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { user } = useSelector((state: RootState) => state.auth);
+  const [liveSettings, setLiveSettings] = useState<ISettings | null>(null);
 
   const [formData, setFormData] = useState({
     senderName: "",
@@ -36,6 +38,18 @@ export function ContactSupport() {
     type: "support",
     message: "",
   });
+
+  useEffect(() => {
+    const fetchLiveSettings = async () => {
+      try {
+        const res = await SettingsService.getSettings(true);
+        if (res && res.success) setLiveSettings(res.data);
+      } catch (err) {
+        console.error("Failed to fetch site settings:", err);
+      }
+    };
+    fetchLiveSettings();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -85,7 +99,6 @@ export function ContactSupport() {
           "Failed to send message. Please try again later.",
       );
     } finally {
-      setLoading(true); // Wait a bit before allowing another submit (spinner UX)
       setTimeout(() => setLoading(false), 500);
     }
   };
@@ -122,10 +135,10 @@ export function ContactSupport() {
                       Email Us
                     </p>
                     <a
-                      href="mailto:support@royalproperty.com"
+                      href={`mailto:${liveSettings?.contactEmail || "support@royalproperty.com"}`}
                       className="text-[15px] font-semibold text-slate-900 dark:text-white hover:text-royal-600 transition-colors"
                     >
-                      support@royalproperty.com
+                      {liveSettings?.contactEmail || "support@royalproperty.com"}
                     </a>
                   </div>
                 </div>
@@ -139,10 +152,10 @@ export function ContactSupport() {
                       Call Us
                     </p>
                     <a
-                      href="tel:+923001234567"
+                      href={`tel:${liveSettings?.contactPhone?.replace(/\s/g, "") || "+923001234567"}`}
                       className="text-[15px] font-semibold text-slate-900 dark:text-white hover:text-emerald-600 transition-colors"
                     >
-                      +92 300 1234567
+                      {liveSettings?.contactPhone || "+92 300 1234567"}
                     </a>
                   </div>
                 </div>
@@ -155,10 +168,8 @@ export function ContactSupport() {
                     <p className="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                       Head Office
                     </p>
-                    <p className="text-[15px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
-                      123 DHA Phase 6, Main Boulevard
-                      <br />
-                      Lahore, Pakistan
+                    <p className="text-[15px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                      {liveSettings?.contactAddress || "123 DHA Phase 6, Main Boulevard\nLahore, Pakistan"}
                     </p>
                   </div>
                 </div>

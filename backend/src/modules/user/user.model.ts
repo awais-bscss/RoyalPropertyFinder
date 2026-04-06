@@ -19,6 +19,7 @@ export interface IUser extends Document {
   city?: string;
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
+  status: "active" | "deactivated";
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -97,6 +98,12 @@ const userSchema = new Schema<IUser>(
     emailVerificationExpires: {
       type: Date,
       select: false,
+    },
+    status: {
+      type: String,
+      enum: ["active", "deactivated"],
+      default: "active",
+      select: true, // we need to check this during login/middleware
     },
   },
   {

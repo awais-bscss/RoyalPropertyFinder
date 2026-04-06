@@ -57,7 +57,31 @@ export const InquiryService = {
   /**
    * Admin: Send a reply to an inquiry via email
    */
-  replyToInquiry: async (id: string, message: string): Promise<ApiResponse> => {
-    return apiClient.post(`/inquiries/${id}/reply`, { message });
+  replyToInquiry: async (id: string, message: string, attachments: File[]): Promise<ApiResponse> => {
+    if (!attachments || attachments.length === 0) {
+      // If no files, we can still use JSON
+      return apiClient.post(`/inquiries/${id}/reply`, { message });
+    }
+    
+    const formData = new FormData();
+    formData.append("message", message);
+    
+    // Append each file to the 'attachments' field
+    attachments.forEach((file) => {
+      formData.append("attachments", file);
+    });
+
+    console.log("--- DEBUG: Final FormData for API ---");
+    for (const [key, value] of (formData as any).entries()) {
+      console.log(`- ${key}:`, value instanceof File ? `${value.name} (${value.size} bytes)` : value);
+    }
+    
+    return apiClient.post(`/inquiries/${id}/reply`, formData, {
+      headers: { "Content-Type": undefined },
+    });
+  },
+
+  deleteReply: async (id: string, replyId: string): Promise<ApiResponse> => {
+    return apiClient.delete(`/inquiries/${id}/replies/${replyId}`);
   },
 };

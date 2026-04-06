@@ -3,6 +3,10 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IReply {
   message: string;
   adminName: string;
+  attachments?: {
+    filename: string;
+    path: string;
+  }[];
   createdAt: Date;
 }
 
@@ -46,6 +50,12 @@ const InquirySchema: Schema = new Schema(
       {
         message: { type: String, required: true },
         adminName: { type: String, required: true },
+        attachments: [
+          {
+            filename: String,
+            path: String,
+          }
+        ],
         createdAt: { type: Date, default: Date.now },
       },
     ],

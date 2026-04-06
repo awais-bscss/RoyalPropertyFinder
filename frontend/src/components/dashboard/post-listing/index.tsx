@@ -83,10 +83,9 @@ export function PostListing() {
 
         <ImagesSection
           images={form.images}
-          coverIdx={form.coverIdx}
-          setCoverIdx={form.setCoverIdx}
           handleImageUpload={form.handleImageUpload}
           removeImage={form.removeImage}
+          reorderImages={form.reorderImages}
           fileInputRef={form.fileInputRef}
           imageScore={form.imageScore}
           videoLinks={form.videoLinks}

@@ -39,7 +39,8 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     // Unwrap the top-level response payload for cleaner controller components
-    return response.data;
+    // If response is empty (e.g., 204 No Content), return a truthy object so UI updates trigger
+    return response.data || { success: true };
   },
   async (error: AxiosError) => {
     // Destructure the response from error safely

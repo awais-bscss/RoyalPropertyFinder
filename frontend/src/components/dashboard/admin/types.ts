@@ -76,6 +76,29 @@ export interface SupportInquiry {
   replies?: InquiryReply[];
 }
 
+export interface PropertyInquiry {
+  _id: string;
+  senderName: string;
+  senderEmail: string;
+  senderPhone?: string;
+  message: string;
+  status: "unread" | "read" | "replied" | "archived";
+  createdAt: string;
+  listing?: {
+    _id: string;
+    title: string;
+    location: string;
+    price: number;
+    currency: string;
+    images: string[];
+  };
+  seller?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+}
+
 // ── Display Maps & Helpers ──────────────────────────────────────────────────
 
 import { Clock, CheckCircle2, XCircle, AlertCircle, HelpCircle, FileText, Flag, Megaphone } from "lucide-react";

@@ -43,6 +43,10 @@ export function LoginModal({
       if (!remembered) {
         setEmail("");
         setPassword("");
+      } else {
+        const cachedEmail = localStorage.getItem("rpf_login_email");
+        if (cachedEmail) setEmail(cachedEmail);
+        setPassword(""); // Always clear password block safely to force the native OS browser vault to fill it organically
       }
       setRememberMe(remembered);
       setIsForgotPassword(false);
@@ -77,8 +81,10 @@ export function LoginModal({
     try {
       if (rememberMe) {
         localStorage.setItem("rpf_remember_me", "true");
+        localStorage.setItem("rpf_login_email", email);
       } else {
         localStorage.removeItem("rpf_remember_me");
+        localStorage.removeItem("rpf_login_email");
       }
 
       const response = await AuthService.login({

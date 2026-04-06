@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import path from "path";
 import { catchAsync } from "../../shared/utils/catchAsync";
 import { AppError } from "../../shared/errors/AppError";
 import Inquiry from "./inquiry.model";
@@ -139,18 +140,40 @@ export const getInquiryStats = catchAsync(async (req: Request, res: Response) =>
  * @access  Admin only
  */
 export const replyToInquiry = catchAsync(async (req: Request, res: Response) => {
-  const { message } = replyInquirySchema.parse(req.body);
+  // 1. Validate against Zod schema
+  let message;
+  try {
+    const validated = replyInquirySchema.parse(req.body);
+    message = validated.message;
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.errors ? error.errors[0].message : "Invalid input data",
+      details: error.errors
+    });
+  }
 
   const inquiry = await Inquiry.findById(req.params.id);
   if (!inquiry) {
     throw new AppError("Inquiry not found", 404);
   }
 
+  // Prepare Attachments if any
+  const files = (req as any).files || [];
+
+  const attachments = files.map((f: any) => {
+    return {
+      filename: f.originalname,
+      path: f.path,
+    };
+  });
+
   // Send Email
   await sendEmail({
-    to: inquiry.senderEmail,
+    email: inquiry.senderEmail,
     subject: `Re: ${inquiry.subject} - Royal Property Finder Support`,
-    text: message,
+    message: message,
+    attachments: attachments,
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <h2>Hello ${inquiry.senderName},</h2>
@@ -158,6 +181,13 @@ export const replyToInquiry = catchAsync(async (req: Request, res: Response) => 
         <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
           ${message.replace(/\n/g, '<br>')}
         </div>
+        ${attachments.length > 0 ? `
+          <div style="margin-top: 20px; font-size: 13px; color: #555;">
+            <p>📎 Attachments (${attachments.length}):</p>
+            <ul style="margin: 5px 0;">
+              ${attachments.map((a: any) => `<li><strong>${a.filename}</strong></li>`).join('')}
+            </ul>
+          </div>` : ''}
         <p>Best regards,<br><strong>Royal Property Finder Support Team</strong></p>
         <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
         <p style="font-size: 12px; color: #777;">
@@ -168,12 +198,18 @@ export const replyToInquiry = catchAsync(async (req: Request, res: Response) => 
     `,
   });
 
-  // Save reply to DB
+  // Log reply in database
   inquiry.replies.push({
     message,
     adminName: (req as any).user?.name || "Admin Support",
+    attachments: attachments.map((a: any) => ({
+      filename: a.filename,
+      path: `/uploads/attachments/${path.basename(a.path)}`
+    })),
     createdAt: new Date(),
   });
+
+  await inquiry.save();
 
   // Optionally update status to in_progress if it was open
   if (inquiry.status === "open") {
@@ -185,6 +221,34 @@ export const replyToInquiry = catchAsync(async (req: Request, res: Response) => 
   res.status(200).json({
     success: true,
     message: "Reply sent successfully",
+  });
+});
+
+/**
+ * @desc    Delete a specific reply (Admin Only)
+ * @route   DELETE /api/v1/inquiries/:id/replies/:replyId
+ * @access  Admin only
+ */
+export const deleteReply = catchAsync(async (req: Request, res: Response) => {
+  const { id, replyId } = req.params;
+
+  const inquiry = await Inquiry.findById(id);
+  if (!inquiry) {
+    throw new AppError("Inquiry not found", 404);
+  }
+
+  // Use Mongoose pull to remove the subdocument
+  const replyToRemove = (inquiry.replies as any).id(replyId);
+  if (!replyToRemove) {
+    throw new AppError("Reply not found", 404);
+  }
+
+  replyToRemove.deleteOne();
+  await inquiry.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Reply deleted successfully",
   });
 });
 

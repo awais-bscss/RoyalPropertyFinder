@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, Loader2, MapPin, X } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Loader2, MapPin, X, Building2 } from "lucide-react";
 import { LISTING_STATUS, timeAgo } from "../types";
 import { formatPrice } from "@/lib/utils";
 import type { Listing } from "../types";
@@ -21,6 +22,8 @@ export function ListingDrawer({
   actionLoading,
 }: Props) {
   const sc = LISTING_STATUS[listing.status];
+  const [activeIdx, setActiveIdx] = useState(0);
+  const validImages = (listing.images || []).filter(img => img && img.trim() !== "");
 
   return (
     <div className="fixed inset-0 flex justify-end" style={{ zIndex: 100 }}>
@@ -48,40 +51,74 @@ export function ListingDrawer({
           </button>
         </div>
 
-        {/* Images */}
-        {listing.images.length > 0 && (
-          <div className="flex gap-2 p-4 overflow-x-auto">
-            {listing.images.map((img, i) => (
-              <img
+        {/* Main Cover Image */}
+        <div className="w-full h-64 bg-slate-100 dark:bg-slate-800 relative overflow-hidden shrink-0">
+           {validImages.length > 0 ? (
+             <img 
+               src={validImages[activeIdx] || validImages[0]} 
+               alt="Property cover" 
+               className="w-full h-full object-cover transition-all duration-300" 
+             />
+           ) : (
+             <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                <Building2 className="w-12 h-12 opacity-20" />
+                <span className="text-[12px] font-bold uppercase tracking-widest opacity-40">No Images Available</span>
+             </div>
+           )}
+           <div className="absolute top-4 left-4">
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border shadow-lg ${sc.cls} bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm`}>
+                 <sc.icon className="w-3 h-3" />
+                 {sc.label}
+              </span>
+           </div>
+           {validImages.length > 1 && (
+             <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[11px] font-bold px-2 py-1 rounded-full">
+               {activeIdx + 1} / {validImages.length}
+             </div>
+           )}
+        </div>
+
+        {/* Thumbnail Strip */}
+        {validImages.length > 0 && (
+          <div
+            className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {validImages.map((img, i) => (
+              <button
                 key={i}
-                src={img}
-                alt=""
-                className="w-48 h-32 object-cover rounded-xl shrink-0 border border-slate-200"
-              />
+                onClick={() => setActiveIdx(i)}
+                style={{ WebkitScrollbar: "none" } as any}
+                className={`w-20 h-16 rounded-lg overflow-hidden shrink-0 transition-all cursor-pointer border-2 ${
+                  i === activeIdx
+                    ? "border-royal-600 opacity-100 shadow-md"
+                    : "border-transparent opacity-85 hover:opacity-100 hover:border-slate-300"
+                }`}
+              >
+                <img
+                  src={img}
+                  alt={`Photo ${i + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
             ))}
           </div>
         )}
 
         {/* Details */}
-        <div className="p-5 space-y-5 flex-1">
+        <div className="p-4 space-y-4 flex-1">
           <div className="flex items-center justify-between">
-            <span
-              className={`inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full border ${sc.cls}`}
-            >
-              <sc.icon className="w-3.5 h-3.5" />
-              {sc.label}
-            </span>
-            <div className="text-right">
-              <p className="text-[20px] font-black text-slate-900 dark:text-white">
+            <div className="text-left">
+              <p className="text-[11px] text-slate-500 uppercase tracking-[0.1em] font-black">{listing.purpose} Property</p>
+              <p className="text-[22px] font-black text-royal-600">
                 {formatPrice(listing.currency, listing.price)}
               </p>
-              <p className="text-[12px] text-slate-500">{listing.purpose}</p>
             </div>
           </div>
 
           {listing.rejectionReason && (
-            <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-xl p-3">
-              <p className="text-[12px] font-bold text-rose-700 mb-1">
+            <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-lg p-2.5">
+              <p className="text-[11px] font-bold text-rose-700 mb-0.5 uppercase tracking-wide">
                 Rejection Reason
               </p>
               <p className="text-[13px] text-rose-600">
@@ -90,7 +127,7 @@ export function ListingDrawer({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {[
               { label: "Type", value: listing.subtype },
               {
@@ -108,12 +145,12 @@ export function ListingDrawer({
             ].map(({ label, value }) => (
               <div
                 key={label}
-                className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3"
+                className="bg-slate-50 dark:bg-slate-800 rounded-lg p-2.5 flex flex-col justify-center"
               >
-                <p className="text-[11px] text-slate-500 uppercase tracking-wide font-semibold mb-1">
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-0.5">
                   {label}
                 </p>
-                <p className="text-[14px] font-bold text-slate-800 dark:text-white">
+                <p className="text-[13px] font-black text-slate-800 dark:text-white uppercase truncate">
                   {value}
                 </p>
               </div>
@@ -121,13 +158,13 @@ export function ListingDrawer({
           </div>
 
           {/* Submitted by */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-3">
+          <div className="border border-slate-100 dark:border-slate-800 rounded-lg p-3 bg-slate-50/30 dark:bg-slate-800/20">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">
               Submitted By
             </p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-royal-700 text-white flex items-center justify-center font-bold text-sm uppercase overflow-hidden">
-                {listing.user?.profilePic ? (
+                {listing.user?.profilePic && listing.user.profilePic.trim() !== "" ? (
                   <img
                     src={listing.user.profilePic}
                     alt=""

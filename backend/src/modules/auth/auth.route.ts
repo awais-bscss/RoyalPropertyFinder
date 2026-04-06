@@ -1,6 +1,6 @@
 import { Router } from "express";
 import passport from "passport";
-import * as authController from "./auth.controller";
+import * as authController from "./controllers";
 import { protect } from "../../api/middlewares/auth.middleware";
 
 const router = Router();
@@ -56,5 +56,14 @@ router.patch("/reset-password/:token", authController.resetPassword);
 router.post("/resend-verification", protect, authController.resendVerification);
 router.get("/verify-email/:token", authController.verifyEmail);
 router.patch("/update-password", protect, authController.updatePassword);
+
+// --- Active Sessions (Redis) ---
+router.get("/sessions", protect, authController.getSessions);
+router.delete("/sessions", protect, authController.revokeAllSessions);
+router.delete("/sessions/history", protect, authController.clearHistory);
+router.delete("/sessions/history/:sessionId", protect, authController.deleteSessionHistory);
+router.delete("/sessions/:sessionId", protect, authController.revokeSession);
+router.post("/deactivate", protect, authController.deactivateAccount);
+router.delete("/delete-account", protect, authController.deleteAccount);
 
 export default router;

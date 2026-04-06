@@ -10,8 +10,24 @@ import {
   FaLinkedinIn,
 } from "react-icons/fa6";
 import { Logo } from "@/components/common/Logo";
+import SettingsService, { ISettings } from "@/services/settings.service";
+import { useState, useEffect } from "react";
 
 export function Footer() {
+  const [liveSettings, setLiveSettings] = useState<ISettings | null>(null);
+
+  useEffect(() => {
+    const fetchLiveSettings = async () => {
+      try {
+        const res = await SettingsService.getSettings(true);
+        if (res && res.success) setLiveSettings(res.data);
+      } catch (err) {
+        console.error("Failed to fetch site settings in footer:", err);
+      }
+    };
+    fetchLiveSettings();
+  }, []);
+
   return (
     <footer className="bg-[#1A1A1A] text-[#BCBCBC] pt-16 pb-8 text-sm font-sans">
       <div className="container mx-auto px-4">
@@ -26,7 +42,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-white transition-colors">
+                <Link href="/contact" className="hover:text-white transition-colors">
                   Contact Us
                 </Link>
               </li>
@@ -96,16 +112,14 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-white flex-none mt-0.5" />
-                <span>
-                  Pearl One, 94-B/I, MM Alam Road,
-                  <br />
-                  Gulberg III, Lahore, Pakistan
+                <span className="whitespace-pre-line leading-relaxed">
+                  {liveSettings?.contactAddress || "Pearl One, 94-B/I, MM Alam Road,\nGulberg III, Lahore, Pakistan"}
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-white flex-none" />
                 <span className="font-semibold text-white">
-                  0800-ROYAL (76925)
+                  {liveSettings?.contactPhone || "0800-ROYAL (76925)"}
                 </span>
               </li>
               <li className="flex items-start gap-3 pl-8">
@@ -113,9 +127,12 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-white flex-none" />
-                <Link href="#" className="hover:text-white transition-colors">
-                  Email Us
-                </Link>
+                <a 
+                  href={`mailto:${liveSettings?.contactEmail || "support@royalproperty.com"}`} 
+                  className="hover:text-white transition-colors font-medium"
+                >
+                  {liveSettings?.contactEmail || "support@royalproperty.com"}
+                </a>
               </li>
             </ul>
           </div>
@@ -139,23 +156,26 @@ export function Footer() {
               </div>
             </div>
 
-            <div>
               <h3 className="text-white font-bold text-lg mb-4">
                 Get Connected
               </h3>
               <div className="flex items-center gap-3">
                 {/* Facebook */}
-                <Link
-                  href="#"
+                <a
+                  href={liveSettings?.facebook || "https://facebook.com"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="Facebook"
                   className="w-9 h-9 rounded-full bg-[#1877F2] flex items-center justify-center text-white hover:opacity-85 transition-opacity"
                 >
                   <FaFacebook size={18} />
-                </Link>
+                </a>
 
                 {/* Instagram */}
-                <Link
-                  href="#"
+                <a
+                  href={liveSettings?.instagram || "https://instagram.com"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="Instagram"
                   className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:opacity-85 transition-opacity"
                   style={{
@@ -164,36 +184,41 @@ export function Footer() {
                   }}
                 >
                   <FaInstagram size={18} />
-                </Link>
+                </a>
 
                 {/* YouTube */}
-                <Link
-                  href="#"
+                <a
+                  href={liveSettings?.youtube || "https://youtube.com"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="YouTube"
                   className="w-9 h-9 rounded-full bg-[#FF0000] flex items-center justify-center text-white hover:opacity-85 transition-opacity"
                 >
                   <FaYoutube size={18} />
-                </Link>
+                </a>
 
                 {/* X / Twitter */}
-                <Link
-                  href="#"
+                <a
+                  href={liveSettings?.twitter || "https://twitter.com"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="X (Twitter)"
                   className="w-9 h-9 rounded-full bg-black flex items-center justify-center text-white hover:opacity-85 transition-opacity"
                 >
                   <FaXTwitter size={17} />
-                </Link>
+                </a>
 
                 {/* LinkedIn */}
-                <Link
-                  href="#"
+                <a
+                  href={liveSettings?.linkedin || "https://linkedin.com"}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="LinkedIn"
                   className="w-9 h-9 rounded-full bg-[#0A66C2] flex items-center justify-center text-white hover:opacity-85 transition-opacity"
                 >
                   <FaLinkedinIn size={17} />
-                </Link>
+                </a>
               </div>
-            </div>
           </div>
         </div>
 

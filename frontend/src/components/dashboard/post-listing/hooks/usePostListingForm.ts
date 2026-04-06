@@ -72,14 +72,12 @@ export function usePostListingForm(initialData?: ListingInitialData) {
   // Section 5 – Images & Videos
   // existingImageUrls holds URLs already stored on the server (edit mode only)
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialData?.images ?? []);
-  const [images, setImages] = useState<File[]>([]);
-  const [coverIdx, setCoverIdx] = useState(0);
+  const [images, setImages] = useState<Array<{ id: string; file: File }>>([]);
   const [videoLinks, setVideoLinks] = useState<string[]>(initialData?.videoLinks ?? []);
   const [videoInput, setVideoInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Section 6 – Contact
-  // react-phone-number-input uses string | undefined for its value
   const [contactEmail, setContactEmail] = useState(initialData?.contactEmail ?? user?.email ?? "");
   const [mobileNumbers, setMobileNumbers] = useState<Array<string | undefined>>(
     initialData?.mobileNumbers?.length ? initialData.mobileNumbers : [""]
@@ -96,13 +94,31 @@ export function usePostListingForm(initialData?: ListingInitialData) {
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setImages((prev) => [...prev, ...files].slice(0, 20));
+    
+    if (images.length + files.length > 20) {
+      toast.warning(`Maximum 20 images allowed. You can only add ${20 - images.length} more.`);
+    }
+
+    const newImages = files.slice(0, 20 - images.length).map(file => ({
+      id: Math.random().toString(36).substring(7) + "-" + Date.now(),
+      file
+    }));
+
+    setImages((prev) => [...prev, ...newImages]);
     e.target.value = "";
   };
 
   const removeImage = (idx: number) => {
     setImages((prev) => prev.filter((_, i) => i !== idx));
-    if (coverIdx >= idx && coverIdx > 0) setCoverIdx((p) => p - 1);
+  };
+
+  const reorderImages = (oldIndex: number, newIndex: number) => {
+    setImages((prev) => {
+      const newArr = [...prev];
+      const [movedItem] = newArr.splice(oldIndex, 1);
+      newArr.splice(newIndex, 0, movedItem);
+      return newArr;
+    });
   };
 
   const toggleAmenity = (a: string) => {
@@ -167,7 +183,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
     // Existing image URLs kept on the server
     formData.append("images", JSON.stringify(existingImageUrls));
     // Newly picked File objects
-    images.forEach((img) => formData.append("images", img));
+    images.forEach((img) => formData.append("images", img.file));
     return formData;
   };
 
@@ -202,7 +218,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
       contactEmail,
       mobileNumbers: validMobiles,
       landline: landline || null,
-      images: [...existingImageUrls, ...images], // File[] + string[]
+      images: [...existingImageUrls, ...images.map(img => img.file)], // File[] + string[]
       videoLinks,
     };
 
@@ -221,6 +237,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
     try {
       await apiClient.post("/listings", buildFormData(), {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60000, // 60 seconds for multi-image uploads
       });
       toast.update(toastId, { 
         render: "Listing published successfully!", 
@@ -271,7 +288,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
       contactEmail,
       mobileNumbers: validMobiles,
       landline: landline || null,
-      images: [...existingImageUrls, ...images], // Combine existing + new for validation count/size
+      images: [...existingImageUrls, ...images.map(img => img.file)], // Combine existing + new for validation count/size
       videoLinks,
     };
 
@@ -290,6 +307,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
 
       await apiClient.patch(`/listings/${listingId}`, buildFormData(), {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60000, // 60 seconds for multi-image uploads
       });
       toast.update(toastId, { 
         render: "Listing updated successfully!", 
@@ -332,7 +350,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
     title, setTitle,
     description, setDescription,
     existingImageUrls, setExistingImageUrls,
-    images, coverIdx, setCoverIdx,
+    images,
     videoLinks, videoInput, setVideoInput,
     contactEmail, setContactEmail,
     mobileNumbers,
@@ -342,7 +360,7 @@ export function usePostListingForm(initialData?: ListingInitialData) {
     // Derived
     amenityScore, imageScore,
     // Handlers
-    handleImageUpload, removeImage,
+    handleImageUpload, removeImage, reorderImages,
     toggleAmenity,
     addVideoLink, removeVideoLink,
     addMobileNumber, updateMobileNumber, removeMobileNumber,

@@ -7,9 +7,11 @@ import {
   deleteInquiry,
   getInquiryStats,
   replyToInquiry,
+  deleteReply,
 } from "./inquiry.controller";
 import { protect } from "../../api/middlewares/auth.middleware";
 import { requireAdmin } from "../../api/middlewares/admin.middleware";
+import { uploadAttachment } from "../../shared/utils/inquiryMulter";
 
 const router = Router();
 
@@ -30,7 +32,8 @@ router.get("/stats", getInquiryStats);
 router.get("/", getAllInquiries);
 router.patch("/:id/status", updateInquiryStatus);
 router.patch("/:id/priority", updateInquiryPriority);
-router.post("/:id/reply", replyToInquiry);
+router.post("/:id/reply", uploadAttachment.array('attachments', 5), replyToInquiry);
+router.delete("/:id/replies/:replyId", deleteReply);
 router.delete("/:id", deleteInquiry);
 
 export default router;

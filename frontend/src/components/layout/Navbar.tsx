@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { Search, User, Menu, Plus, Home, ChevronRight } from "lucide-react";
+import { Search, User, Menu, Plus, Home, ChevronRight, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Logo } from "@/components/common/Logo";
 import { LoginModal, SignUpModal } from "@/components/auth";
 import { ManageAlertsModal } from "@/components/user/ManageAlertsModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { logoutAuth } from "@/store/slices/authSlice";
 import { AuthService } from "@/services/auth.service";
+import { ListingInquiryService } from "@/services/listingInquiry.service";
 import { toast } from "react-toastify";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ export function Navbar() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isManageAlertsOpen, setIsManageAlertsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Redux Hook Setup
   const { user, isAuthenticated } = useSelector(
@@ -53,6 +55,23 @@ export function Navbar() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentTab = searchParams.get("tab");
+
+  const fetchUnreadCount = async () => {
+    if (isAuthenticated) {
+       try {
+          const res: any = await ListingInquiryService.getMyInquiries();
+          if (res.success) {
+             setUnreadCount(res.data.filter((i: any) => i.status === 'unread').length);
+          }
+       } catch (err) {
+          console.warn("Failed to fetch unread count", err);
+       }
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [isAuthenticated]);
 
   const handleAddProperty = () => {
     if (isAuthenticated) {
@@ -143,6 +162,17 @@ export function Navbar() {
 
             <div className="flex items-center space-x-8 border-l border-slate-200 pl-1 pr-2">
               <ThemeToggle />
+
+              {isAuthenticated && (
+                 <Link href="/dashboard/inbox" className="relative p-1 text-white hover:text-royal-100 transition-colors">
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-royal-800">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                       </span>
+                    )}
+                 </Link>
+              )}
 
               {isAuthenticated ? (
                 <DropdownMenu>

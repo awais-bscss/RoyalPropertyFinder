@@ -1,256 +1,265 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Save, Mail, Phone, MapPin, Loader2, Settings, ChevronRight, Facebook, Instagram, Youtube, Twitter, Linkedin, Share2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { CheckCircle2, Save, Server, Shield, Sliders } from "lucide-react";
+import SettingsService, { ISettings } from "@/services/settings.service";
+import { SettingsCard } from "../../settings/components/SettingsCard";
+import { Field, TextInput } from "../../settings/components/Inputs";
 
 export function ConfigTab() {
-  const [loading, setLoading] = useState(false);
-
-  // Simulated initial config
-  const [config, setConfig] = useState({
-    siteName: "Royal Property Finder",
-    supportEmail: "support@royalproperty.com",
-    supportPhone: "+92 300 1234567",
-    currency: "PKR",
-    maintenanceMode: false,
-    autoApproveAgents: true,
-    maxImagesPerListing: 15,
-    allowRegistrations: true,
+  const [settings, setSettings] = useState<ISettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    contactEmail: "",
+    contactPhone: "",
+    contactAddress: "",
+    facebook: "",
+    instagram: "",
+    youtube: "",
+    twitter: "",
+    linkedin: "",
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  const [activeSubTab, setActiveSubTab] = useState("general");
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await SettingsService.getSettings();
+        if (res.success) {
+          setSettings(res.data);
+          setFormData({
+            contactEmail: res.data.contactEmail,
+            contactPhone: res.data.contactPhone,
+            contactAddress: res.data.contactAddress,
+            facebook: res.data.facebook || "",
+            instagram: res.data.instagram || "",
+            youtube: res.data.youtube || "",
+            twitter: res.data.twitter || "",
+            linkedin: res.data.linkedin || "",
+          });
+        }
+      } catch (err) {
+        toast.error("Failed to load settings");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("Platform configuration updated successfully");
-      setLoading(false);
-    }, 800);
+    try {
+      setSaving(true);
+      const res = await SettingsService.updateSettings(formData);
+      if (res.success) {
+        setSettings(res.data);
+        toast.success("Settings saved successfully");
+      }
+    } catch (err) {
+      toast.error("Failed to update settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-royal-600" />
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
-      {/* Platform Details Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="border-b border-slate-100 dark:border-slate-800 p-5 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-royal-100 text-royal-700 flex items-center justify-center shrink-0">
-            <Server className="w-4 h-4" />
+    <div className="flex gap-5 h-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* ── Left Nav Rail ── */}
+      <div className="w-[230px] shrink-0 sticky top-0 self-start">
+        <div className="bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+          <div className="px-4 py-4 border-b border-slate-100 dark:border-slate-800">
+            <p className="text-[16px] font-bold text-slate-900 dark:text-white uppercase tracking-tight">System Config</p>
+            <p className="text-[13px] font-medium text-slate-500 mt-0.5">Platform Defaults</p>
           </div>
-          <div>
-            <h3 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">
-              General Identity
-            </h3>
-            <p className="text-[12px] text-slate-500 mt-0.5">
-              Public contact info and basic platform identifying details.
-            </p>
-          </div>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <label className="text-[13px] font-bold text-slate-700 dark:text-slate-300">
-              Platform Name
-            </label>
-            <input
-              type="text"
-              value={config.siteName}
-              onChange={(e) =>
-                setConfig({ ...config, siteName: e.target.value })
-              }
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-royal-400"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[13px] font-bold text-slate-700 dark:text-slate-300">
-              Default Currency
-            </label>
-            <select
-              value={config.currency}
-              onChange={(e) =>
-                setConfig({ ...config, currency: e.target.value })
-              }
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-royal-400 appearance-none"
+          <nav className="p-2 space-y-0.5">
+            <button
+              onClick={() => setActiveSubTab("general")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-[14.5px] transition-all duration-150 cursor-pointer group ${
+                activeSubTab === "general"
+                  ? "bg-[#daf1f5] dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-semibold"
+                  : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 font-medium hover:text-slate-800 hover:dark:text-white/90"
+              }`}
             >
-              <option value="PKR">PKR (Pakistani Rupee)</option>
-              <option value="USD">USD (US Dollar)</option>
-              <option value="AED">AED (Emirati Dirham)</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[13px] font-bold text-slate-700 dark:text-slate-300">
-              Support Email
-            </label>
-            <input
-              type="email"
-              value={config.supportEmail}
-              onChange={(e) =>
-                setConfig({ ...config, supportEmail: e.target.value })
-              }
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-royal-400"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[13px] font-bold text-slate-700 dark:text-slate-300">
-              Support Phone
-            </label>
-            <input
-              type="text"
-              value={config.supportPhone}
-              onChange={(e) =>
-                setConfig({ ...config, supportPhone: e.target.value })
-              }
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-royal-400"
-            />
-          </div>
+              <Settings className="w-[17px] h-[17px] shrink-0" />
+              <span className="flex-1 truncate">Contact Info</span>
+              {activeSubTab === "general" && <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />}
+            </button>
+            <button
+              onClick={() => setActiveSubTab("social")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-[14.5px] transition-all duration-150 cursor-pointer group ${
+                activeSubTab === "social"
+                  ? "bg-[#daf1f5] dark:bg-royal-500/20 text-royal-700 dark:text-royal-300 font-semibold"
+                  : "text-slate-600 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/5 font-medium hover:text-slate-800 hover:dark:text-white/90"
+              }`}
+            >
+              <Share2 className="w-[17px] h-[17px] shrink-0" />
+              <span className="flex-1 truncate">Brand & Social</span>
+              {activeSubTab === "social" && <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />}
+            </button>
+          </nav>
         </div>
       </div>
 
-      {/* Listing Rules Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="border-b border-slate-100 dark:border-slate-800 p-5 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-            <Sliders className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">
-              Listing Operations & Media
-            </h3>
-            <p className="text-[12px] text-slate-500 mt-0.5">
-              Control constraints and approval pipelines for user listings.
-            </p>
-          </div>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/20">
-            <div>
-              <p className="text-[13px] font-bold text-slate-900 dark:text-white">
-                Auto-Approve Verified Agents
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                If enabled, listings from users with the "Agent" role bypass the
-                manual pending queue.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setConfig({
-                  ...config,
-                  autoApproveAgents: !config.autoApproveAgents,
-                })
+      {/* ── Right Content Area ── */}
+      <div className="flex-1 min-w-0 pb-10">
+        <form onSubmit={handleUpdate} className="space-y-4">
+          {activeSubTab === "general" && (
+            <SettingsCard
+              title="Global Contact Details"
+              description="Manage the email, phone and address shown across the platform and contact page."
+              footer={
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer disabled:opacity-75 shadow-sm"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Configuration
+                    </>
+                  )}
+                </button>
               }
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${config.autoApproveAgents ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"}`}
             >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${config.autoApproveAgents ? "translate-x-2" : "-translate-x-2"}`}
-              />
-            </button>
-          </div>
-
-          <div className="space-y-1.5 px-4 pt-2">
-            <label className="text-[13px] font-bold text-slate-700 dark:text-slate-300">
-              Max Images Per Listing
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={config.maxImagesPerListing}
-              onChange={(e) =>
-                setConfig({
-                  ...config,
-                  maxImagesPerListing: parseInt(e.target.value) || 1,
-                })
-              }
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-royal-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Security Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="border-b border-slate-100 dark:border-slate-800 p-5 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">
-              Security & Access
-            </h3>
-            <p className="text-[12px] text-slate-500 mt-0.5">
-              Highest-level controls for platform availability.
-            </p>
-          </div>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/20">
-            <div>
-              <p className="text-[13px] font-bold text-slate-900 dark:text-white">
-                Allow New Registrations
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                If turned off, the sign up form will be globally disabled.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setConfig({
-                  ...config,
-                  allowRegistrations: !config.allowRegistrations,
-                })
-              }
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${config.allowRegistrations ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"}`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${config.allowRegistrations ? "translate-x-2" : "-translate-x-2"}`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-rose-100 dark:border-rose-900/30 bg-rose-50 dark:bg-rose-900/10">
-            <div>
-              <p className="text-[13px] font-bold text-rose-900 dark:text-rose-400">
-                Maintenance Mode
-              </p>
-              <p className="text-[11px] text-rose-700 dark:text-rose-500 mt-1">
-                Turns off the entire site and renders a "Be right back" landing
-                page for users.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setConfig({
-                  ...config,
-                  maintenanceMode: !config.maintenanceMode,
-                })
-              }
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${config.maintenanceMode ? "bg-rose-500" : "bg-slate-200 dark:bg-slate-700"}`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${config.maintenanceMode ? "translate-x-2" : "-translate-x-2"}`}
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white text-[13px] font-bold shadow-md shadow-royal-500/20 transition-all cursor-pointer disabled:opacity-70"
-        >
-          {loading ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Contact Email" hint="Public email for support inquiries.">
+                  <TextInput
+                    icon={Mail}
+                    type="email"
+                    value={formData.contactEmail}
+                    onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                    placeholder="support@royalproperty.com"
+                  />
+                </Field>
+                <Field label="Contact Phone" hint="Primary company phone number.">
+                  <TextInput
+                    icon={Phone}
+                    value={formData.contactPhone}
+                    onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                    placeholder="+92 300 1234567"
+                  />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="Office Address" hint="Full address shown on contact page.">
+                    <div className="relative group">
+                      <div className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-royal-500 transition-colors">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={formData.contactAddress}
+                        onChange={(e) => setFormData({ ...formData, contactAddress: e.target.value })}
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-sm font-bold text-[14px] text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-royal-500 outline-none transition-all resize-none placeholder:text-slate-400 font-medium"
+                        placeholder="Enter complete office address..."
+                        required
+                      />
+                    </div>
+                  </Field>
+                </div>
+              </div>
+            </SettingsCard>
           )}
-          Save Configuration
-        </button>
+
+          {activeSubTab === "social" && (
+            <SettingsCard
+              title="Social Brand Reach"
+              description="Manage your social media presence across the headers and footer of the platform."
+              footer={
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-1.5 bg-royal-600 hover:bg-royal-700 text-white text-[14px] font-bold px-5 py-2.5 rounded-sm transition-colors cursor-pointer disabled:opacity-75 shadow-sm"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Social Links
+                    </>
+                  )}
+                </button>
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Facebook Profile" hint="Link to company Facebook page.">
+                  <TextInput
+                    icon={Facebook}
+                    value={formData.facebook}
+                    onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+                    placeholder="https://facebook.com/your-brand"
+                  />
+                </Field>
+                <Field label="Instagram Handle" hint="Instagram business profile link.">
+                  <TextInput
+                    icon={Instagram}
+                    value={formData.instagram}
+                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                    placeholder="https://instagram.com/your-brand"
+                  />
+                </Field>
+                <Field label="YouTube Channel" hint="Official YouTube channel URL.">
+                  <TextInput
+                    icon={Youtube}
+                    value={formData.youtube}
+                    onChange={(e) => setFormData({ ...formData, youtube: e.target.value })}
+                    placeholder="https://youtube.com/c/your-brand"
+                  />
+                </Field>
+                <Field label="Twitter / X" hint="Twitter profile URL.">
+                  <TextInput
+                    icon={Twitter}
+                    value={formData.twitter}
+                    onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
+                    placeholder="https://twitter.com/your-brand"
+                  />
+                </Field>
+                <Field label="LinkedIn Page" hint="Company LinkedIn page URL.">
+                  <TextInput
+                    icon={Linkedin}
+                    value={formData.linkedin}
+                    onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                    placeholder="https://linkedin.com/company/your-brand"
+                  />
+                </Field>
+              </div>
+            </SettingsCard>
+          )}
+
+          {/* Sync Stats Info */}
+          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-sm">
+             <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-4">Sync Statistics</h3>
+             <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+               <span>Live Sync Active</span>
+             </div>
+             <p className="text-[12px] text-slate-500 mt-2 font-medium">
+               Last configuration update: {settings?.updatedAt ? new Date(settings.updatedAt).toLocaleString() : "Never"}
+             </p>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }

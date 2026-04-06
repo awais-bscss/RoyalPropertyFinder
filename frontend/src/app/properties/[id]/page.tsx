@@ -37,13 +37,20 @@ import {
   PlayCircle,
   Building,
   Monitor,
-  Camera
+  Camera,
+  MessageCircle,
+  Tag,
+  Globe,
+  Navigation,
+  Building2
 } from "lucide-react";
 import Link from "next/link";
 import apiClient from "@/lib/axios";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListingInquiryService } from "@/services/listingInquiry.service";
+import { toast } from "react-toastify";
 
 const PropertyDisplayMap = dynamic(() => import("@/components/features/properties/PropertyDisplayMap"), { 
   ssr: false,
@@ -61,6 +68,31 @@ export default function PropertyDetailsPage() {
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [isAmenitiesExpanded, setIsAmenitiesExpanded] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // Inquiry Form State
+  const [inquiryForm, setInquiryForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleInquirySubmit = async () => {
+    if (!inquiryForm.name || !inquiryForm.email) {
+      return toast.error("Please provide at least your name and email.");
+    }
+
+    setSubmitting(true);
+    try {
+      await ListingInquiryService.submitInquiry(params.id as string, inquiryForm);
+      toast.success("Inquiry sent successfully! The owner will contact you soon.");
+      setInquiryForm({ name: "", email: "", phone: "" });
+    } catch (error) {
+      toast.error("Failed to send inquiry. Please try again later.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const scrollToMap = () => {
     mapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -158,7 +190,7 @@ export default function PropertyDetailsPage() {
                 {listing.subtype}
               </span>
             </div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white leading-tight mb-2">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight mb-2">
               {listing.title}
             </h1>
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
@@ -168,7 +200,7 @@ export default function PropertyDetailsPage() {
           </div>
           <div className="text-left md:text-right shrink-0">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Asking Price</p>
-            <p className="text-3xl md:text-4xl font-black text-[#023E8A] dark:text-[#48CAE4]">
+            <p className="text-2xl md:text-3xl font-black text-[#023E8A] dark:text-[#48CAE4]">
               {formatPrice(listing.currency, listing.price)}
             </p>
           </div>
@@ -319,23 +351,28 @@ export default function PropertyDetailsPage() {
             {/* Property Summary (Zameen Style Overview Table) */}
             <div className="space-y-6">
                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Property Details</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  {[
-                    { label: "Price", value: formatPrice(listing.currency, listing.price) },
-                    { label: "Type", value: listing.subtype },
-                    { label: "Location", value: listing.location },
-                    { label: "Bath(s)", value: listing.bathrooms || "-" },
-                    { label: "City", value: listing.city },
-                    { label: "Bedroom(s)", value: listing.bedrooms || "-" },
-                    { label: "Province", value: listing.province },
-                    { label: "Area Size", value: `${listing.areaSize} ${listing.areaUnit}` },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                      <span className="text-slate-500 font-medium">{item.label}</span>
-                      <span className="text-slate-900 dark:text-slate-200 font-bold">{item.value}</span>
-                    </div>
-                  ))}
-               </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
+                   {[
+                     { label: "Price", value: formatPrice(listing.currency, listing.price), icon: <Tag size={18} className="text-[#023E8A]" /> },
+                     { label: "Type", value: listing.subtype, icon: <Building size={18} className="text-[#023E8A]" /> },
+                     { label: "Location", value: listing.location, icon: <MapPin size={18} className="text-[#023E8A]" /> },
+                     { label: "Bath(s)", value: listing.bathrooms || "-", icon: <Bath size={18} className="text-[#023E8A]" /> },
+                     { label: "City", value: listing.city, icon: <Globe size={18} className="text-[#023E8A]" /> },
+                     { label: "Bedroom(s)", value: listing.bedrooms || "-", icon: <Bed size={18} className="text-[#023E8A]" /> },
+                     { label: "Province", value: listing.province, icon: <Navigation size={18} className="text-[#023E8A]" /> },
+                     { label: "Area Size", value: `${listing.areaSize} ${listing.areaUnit}`, icon: <Move size={18} className="text-[#023E8A]" /> },
+                   ].map((item, i) => (
+                     <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                       <span className="text-slate-500 font-medium flex items-center gap-3">
+                         <div className="w-8 h-8 rounded bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                           {item.icon}
+                         </div>
+                         {item.label}
+                       </span>
+                       <span className="text-slate-900 dark:text-slate-200 font-black">{item.value}</span>
+                     </div>
+                   ))}
+                </div>
             </div>
 
             {/* Amenities & Features (Zameen Style) */}
@@ -506,24 +543,62 @@ export default function PropertyDetailsPage() {
                    </div>
                    
                    <div className="p-6 space-y-4">
-                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 gap-2 text-[15px]">
+                      <Button 
+                        onClick={() => {
+                          const phone = listing.mobileNumbers?.[0] || "";
+                          if (phone) window.location.href = `tel:${phone}`;
+                          else toast.info("Agent phone number not available.");
+                        }}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 gap-2 text-[15px]"
+                      >
                          <Phone size={18} /> CALL AGENT
                       </Button>
-                      <Button variant="outline" className="w-full border-emerald-600 text-emerald-600 hover:bg-emerald-50 font-black h-12 gap-2 text-[15px]">
-                         WHATSAPP
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          const phone = listing.mobileNumbers?.[0] || "";
+                          if (phone) window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=Hi, I am interested in your property: ${listing.title}`, '_blank');
+                          else toast.info("Agent WhatsApp not available.");
+                        }}
+                        className="w-full border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all font-black h-12 gap-2 text-[15px] group"
+                      >
+                         <MessageCircle size={18} className="group-hover:animate-pulse" /> WHATSAPP
                       </Button>
                       
                       <div className="relative py-4">
-                         <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100 dark:border-slate-800"></span></div>
-                         <div className="relative flex justify-center text-[11px] uppercase font-bold"><span className="bg-white dark:bg-slate-900 px-2 text-slate-400 tracking-widest">Or Inquiry Form</span></div>
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t border-slate-100 dark:border-slate-800"></span>
+                        </div>
+                        <div className="relative flex justify-center text-[11px] uppercase font-bold">
+                          <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 tracking-widest">Or Inquiry Form</span>
+                        </div>
                       </div>
 
                       <div className="space-y-3">
-                         <Input placeholder="Your Name" className="h-11 bg-slate-50 border-transparent focus:bg-white transition-all shadow-none" />
-                         <Input placeholder="Email Address" className="h-11 bg-slate-50 border-transparent focus:bg-white transition-all shadow-none" />
-                         <Input placeholder="Phone Number" className="h-11 bg-slate-50 border-transparent focus:bg-white transition-all shadow-none" />
-                         <Button className="w-full bg-[#023E8A] hover:bg-[#03045E] text-white font-black h-12 text-[15px] uppercase tracking-wide">
-                            Request Call Back
+                         <Input 
+                           value={inquiryForm.name}
+                           onChange={(e) => setInquiryForm({ ...inquiryForm, name: e.target.value })}
+                           placeholder="Your Name" 
+                           className="h-11 bg-slate-50 border-transparent focus:bg-white transition-all shadow-none" 
+                         />
+                         <Input 
+                           value={inquiryForm.email}
+                           onChange={(e) => setInquiryForm({ ...inquiryForm, email: e.target.value })}
+                           placeholder="Email Address" 
+                           className="h-11 bg-slate-50 border-transparent focus:bg-white transition-all shadow-none" 
+                         />
+                         <Input 
+                           value={inquiryForm.phone}
+                           onChange={(e) => setInquiryForm({ ...inquiryForm, phone: e.target.value })}
+                           placeholder="Phone Number" 
+                           className="h-11 bg-slate-50 border-transparent focus:bg-white transition-all shadow-none" 
+                         />
+                         <Button 
+                           onClick={handleInquirySubmit}
+                           disabled={submitting}
+                           className="w-full bg-[#023E8A] hover:bg-[#03045E] text-white font-black h-12 text-[15px] uppercase tracking-wide disabled:opacity-50"
+                         >
+                            {submitting ? "Sending..." : "Request Call Back"}
                          </Button>
                       </div>
                       
