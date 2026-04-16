@@ -29,6 +29,7 @@ export interface Listing {
   bathrooms?: string;
   rejectionReason?: string;
   isRoyalProject?: boolean;
+  propertyId: string;
   user?: {
     name: string;
     email: string;

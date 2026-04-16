@@ -11,6 +11,7 @@ import {
   adminRejectListing,
   adminGetStats,
   adminToggleRoyalProject,
+  getListingByShortId,
 } from "./listing.controller";
 import { protect, requireVerified } from "../../api/middlewares/auth.middleware";
 import { requireAdmin } from "../../api/middlewares/admin.middleware";
@@ -38,6 +39,7 @@ router.patch("/:id", requireVerified, upload.fields([{ name: "images", maxCount:
 
 
 // ── Public single listing ─────────────────────────────────────────────────────
+router.get("/search/:propertyId", getListingByShortId);
 router.get("/:id", getListingById);
 
 export default router;

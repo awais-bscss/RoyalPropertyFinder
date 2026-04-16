@@ -41,17 +41,54 @@ export function Hero() {
   const [selectedCategory, setSelectedCategory] = useState<
     "HOMES" | "PLOTS" | "COMMERCIAL"
   >("HOMES");
+  
+  // Search State
   const [city, setCity] = useState("karachi");
   const [location, setLocation] = useState("");
+  const [propertyType, setPropertyType] = useState("any");
+  const [minPrice, setMinPrice] = useState<number | string>(0);
+  const [maxPrice, setMaxPrice] = useState<number | string>("Any");
+  const [minArea, setMinArea] = useState<number | string>(0);
+  const [maxArea, setMaxArea] = useState<number | string>("Any");
+  const [beds, setBeds] = useState("All");
+
   const [resetKey, setResetKey] = useState(0);
 
   const handleReset = (e: React.MouseEvent) => {
     e.preventDefault();
     setCity("karachi");
     setLocation("");
+    setPropertyType("any");
+    setMinPrice(0);
+    setMaxPrice("Any");
+    setMinArea(0);
+    setMaxArea("Any");
+    setBeds("All");
     setSelectedCategory("HOMES");
     setShowMoreOptions(false);
     setResetKey((prev) => prev + 1);
+  };
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    params.set("purpose", activeTab);
+    params.set("city", city);
+    if (location) params.set("location", location);
+    if (propertyType && propertyType !== "any") params.set("subtype", propertyType);
+    if (selectedCategory) params.set("category", selectedCategory);
+    if (minPrice && minPrice !== 0) params.set("minPrice", minPrice.toString());
+    if (maxPrice && maxPrice !== "Any") params.set("maxPrice", maxPrice.toString());
+    if (minArea && minArea !== 0) params.set("minArea", minArea.toString());
+    if (maxArea && maxArea !== "Any") params.set("maxArea", maxArea.toString());
+    if (beds && beds !== "All") params.set("bedrooms", beds);
+    
+    router.push(`/properties?${params.toString()}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   const handleTabChange = (value: string) => {
@@ -63,7 +100,7 @@ export function Hero() {
   };
 
   return (
-    <section className="relative flex flex-col items-center justify-center py-19 md:py-24 overflow-visible min-h-[550px] z-[50]">
+    <section className="relative flex flex-col items-center justify-center py-19 md:py-24 overflow-visible min-h-[550px] z-50">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <Image
@@ -132,12 +169,17 @@ export function Hero() {
                         onChange={(e) => setLocation(e.target.value)}
                         onClick={() => setShowMoreOptions(true)}
                         onFocus={() => setShowMoreOptions(true)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Search Location"
                         className="h-6 border-none text-slate-900 focus-visible:ring-0 font-semibold px-1 shadow-none placeholder:text-slate-300 -mt-0.5"
                       />
                     </div>
 
                     {/* Green Find Button */}
-                    <Button className="px-10 py-0 bg-[#023E8A] !hover:bg-[#03045E] text-white text-sm font-medium transition-all border-none rounded-[2px] h-[50px] cursor-pointer">
+                    <Button 
+                      onClick={handleSearch}
+                      className="px-10 py-0 bg-[#023E8A] !hover:bg-[#03045E] text-white text-sm font-medium transition-all border-none rounded-[2px] h-[50px] cursor-pointer"
+                    >
                       FIND
                     </Button>
                   </div>
@@ -156,17 +198,33 @@ export function Hero() {
                         <PropertyTypeDropdown
                           key={`prop-buy-${resetKey}`}
                           onCategoryChange={(cat) => setSelectedCategory(cat)}
+                          onTypeChange={setPropertyType}
                         />
 
                         {/* Price (PKR) */}
-                        <PriceDropdown key={`price-buy-${resetKey}`} />
+                        <PriceDropdown 
+                          key={`price-buy-${resetKey}`} 
+                          onPriceChange={(min, max) => {
+                            setMinPrice(min);
+                            setMaxPrice(max);
+                          }}
+                        />
 
                         {/* Area (Marla) */}
-                        <AreaDropdown key={`area-buy-${resetKey}`} />
+                        <AreaDropdown 
+                          key={`area-buy-${resetKey}`} 
+                          onAreaChange={(min, max) => {
+                            setMinArea(min);
+                            setMaxArea(max);
+                          }}
+                        />
 
                         {/* Beds */}
                         {selectedCategory === "HOMES" && (
-                          <BedsDropdown key={`beds-buy-${resetKey}`} />
+                          <BedsDropdown 
+                            key={`beds-buy-${resetKey}`} 
+                            onBedsChange={setBeds}
+                          />
                         )}
                       </div>
                     </div>
@@ -223,12 +281,17 @@ export function Hero() {
                         onChange={(e) => setLocation(e.target.value)}
                         onClick={() => setShowMoreOptions(true)}
                         onFocus={() => setShowMoreOptions(true)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Search Location"
                         className="h-6 border-none text-slate-900 focus-visible:ring-0 font-semibold px-1 shadow-none placeholder:text-slate-300 -mt-0.5"
                       />
                     </div>
 
                     {/* Green Find Button */}
-                    <Button className="px-10 py-0 bg-[#023E8A] !hover:bg-[#03045E] text-white text-sm font-medium transition-all border-none rounded-[2px] h-[50px] cursor-pointer">
+                    <Button 
+                      onClick={handleSearch}
+                      className="px-10 py-0 bg-[#023E8A] !hover:bg-[#03045E] text-white text-sm font-medium transition-all border-none rounded-[2px] h-[50px] cursor-pointer"
+                    >
                       FIND
                     </Button>
                   </div>
@@ -247,17 +310,33 @@ export function Hero() {
                         <PropertyTypeDropdown
                           key={`prop-rent-${resetKey}`}
                           onCategoryChange={(cat) => setSelectedCategory(cat)}
+                          onTypeChange={setPropertyType}
                         />
 
                         {/* Price (PKR) */}
-                        <PriceDropdown key={`price-rent-${resetKey}`} />
+                        <PriceDropdown 
+                          key={`price-rent-${resetKey}`} 
+                          onPriceChange={(min, max) => {
+                            setMinPrice(min);
+                            setMaxPrice(max);
+                          }}
+                        />
 
                         {/* Area (Marla) */}
-                        <AreaDropdown key={`area-rent-${resetKey}`} />
+                        <AreaDropdown 
+                          key={`area-rent-${resetKey}`} 
+                          onAreaChange={(min, max) => {
+                            setMinArea(min);
+                            setMaxArea(max);
+                          }}
+                        />
 
                         {/* Beds */}
                         {selectedCategory === "HOMES" && (
-                          <BedsDropdown key={`beds-rent-${resetKey}`} />
+                          <BedsDropdown 
+                            key={`beds-rent-${resetKey}`} 
+                            onBedsChange={setBeds}
+                          />
                         )}
                       </div>
                     </div>

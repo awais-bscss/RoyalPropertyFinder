@@ -4,6 +4,8 @@ import { AppError } from "../../shared/errors/AppError";
 import Listing from "./listing.model";
 import { createListingSchema, updateListingSchema } from "./listing.validation";
 import { uploadToCloudinary } from "../../shared/services/cloudinary.service";
+import Notification, { NotificationType } from "../notification/notification.model";
+import User from "../user/user.model";
 
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -96,24 +98,115 @@ export const createListing = catchAsync(async (req: Request, res: Response) => {
     message: "Listing created successfully",
     data: listing,
   });
+
+  // 6. Notify Admins about the new pending listing
+  try {
+    const admins = await User.find({ role: "admin" }).select("_id");
+    if (admins.length > 0) {
+      const notificationData = admins.map(admin => ({
+        recipient: admin._id,
+        sender: user._id,
+        type: NotificationType.LISTING_SUBMITTED,
+        title: "New Listing Pending Approval",
+        message: `${user.name} has submitted a new property listing: "${listing.title}".`,
+        link: `/admin/dashboard?tab=listings&status=pending`,
+      }));
+      await Notification.insertMany(notificationData);
+    }
+  } catch (error) {
+    console.error("Failed to send admin notification for new listing:", error);
+  }
 });
 
 
 /**
- * @desc    Get all active property listings
+ * @desc    Get all active property listings with comprehensive filtering
  * @route   GET /api/v1/listings
  * @access  Public
  */
 export const getAllListings = catchAsync(async (req: Request, res: Response) => {
-  const { isRoyalProject } = req.query;
+  const { 
+    purpose, 
+    city, 
+    subtype, 
+    propertyTypeTab, 
+    minPrice, 
+    maxPrice, 
+    minArea, 
+    maxArea, 
+    bedrooms, 
+    keyword,
+    isRoyalProject 
+  } = req.query;
+
   const filter: any = { isActive: true, status: "approved" };
 
+  // Purpose (Sell/Rent)
+  if (purpose && purpose !== "any") {
+    // Purpose can be "Sell" or "Rent" in DB, but frontend might send "buy" or "rent"
+    const p = purpose.toString().toLowerCase() === "buy" ? "Sell" : 
+              purpose.toString().toLowerCase() === "rent" ? "Rent" : purpose;
+    filter.purpose = p;
+  }
+
+  // City
+  if (city && city !== "any") {
+    filter.city = { $regex: new RegExp(`^${city}$`, "i") };
+  }
+
+  // Property Type Tab (HOMES -> home, PLOTS -> plot, COMMERCIAL -> commercial)
+  if (propertyTypeTab && propertyTypeTab !== "any") {
+    const tab = propertyTypeTab.toString().toLowerCase();
+    const mappedTab = tab === "homes" ? "home" : 
+                      tab === "plots" ? "plot" : 
+                      tab === "commercial" ? "commercial" : tab;
+    filter.propertyTypeTab = mappedTab;
+  }
+
+  // Subtype (House, Flat, etc)
+  if (subtype && subtype !== "any") {
+    filter.subtype = { $regex: new RegExp(`^${subtype}$`, "i") };
+  }
+
+  // Price Range
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = Number(minPrice);
+    if (maxPrice) filter.price.$lte = Number(maxPrice);
+  }
+
+  // Area Range
+  if (minArea || maxArea) {
+    filter.areaSize = {};
+    if (minArea) filter.areaSize.$gte = Number(minArea);
+    if (maxArea) filter.areaSize.$lte = Number(maxArea);
+  }
+
+  // Bedrooms
+  if (bedrooms && bedrooms !== "All") {
+    filter.bedrooms = bedrooms;
+  }
+
+  // Royal Project
   if (isRoyalProject === "true") {
     filter.isRoyalProject = true;
   }
 
+  // Keyword Search (Title, Description, Location, propertyId)
+  if (keyword) {
+    const kw = keyword.toString().trim();
+    const regex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    filter.$or = [
+      { title: regex },
+      { description: regex },
+      { location: regex },
+      { city: regex },
+      { propertyId: regex },
+      { subtype: regex }
+    ];
+  }
+
   const listings = await Listing.find(filter)
-    .select("-description -selectedAmenities -videoLinks")
     .populate("user", "name email profilePic")
     .sort("-createdAt");
 
@@ -182,6 +275,21 @@ export const adminApproveListing = catchAsync(async (req: Request, res: Response
     message: "Listing approved successfully",
     data: listing,
   });
+
+  // 2. Notify the property owner
+  try {
+    const admin = (req as any).user;
+    await Notification.create({
+      recipient: listing.user,
+      sender: admin._id,
+      type: NotificationType.LISTING_APPROVED,
+      title: "Listing Approved!",
+      message: `Your property listing "${listing.title}" has been approved and is now live.`,
+      link: `/dashboard/my-properties`,
+    });
+  } catch (error) {
+    console.error("Failed to send notification for listing approval:", error);
+  }
 });
 
 /**
@@ -202,6 +310,21 @@ export const adminRejectListing = catchAsync(async (req: Request, res: Response)
     message: "Listing rejected",
     data: listing,
   });
+
+  // 2. Notify the property owner
+  try {
+    const admin = (req as any).user;
+    await Notification.create({
+      recipient: listing.user,
+      sender: admin._id,
+      type: NotificationType.LISTING_REJECTED,
+      title: "Listing Rejected",
+      message: `Your property listing "${listing.title}" was rejected. Reason: ${listing.rejectionReason}`,
+      link: `/dashboard/my-properties`,
+    });
+  } catch (error) {
+    console.error("Failed to send notification for listing rejection:", error);
+  }
 });
 
 /**
@@ -233,6 +356,36 @@ export const getListingById = catchAsync(async (req: Request, res: Response) => 
 
   if (!listing) {
     throw new AppError("Listing not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: listing,
+  });
+});
+
+/**
+ * @desc    Find a listing by its short, human-readable ID (e.g., RP-1001)
+ * @route   GET /api/v1/listings/search/:propertyId
+ * @access  Public
+ */
+export const getListingByShortId = catchAsync(async (req: Request, res: Response) => {
+  let cleanId = (req.params.propertyId || "").toString();
+  
+  // Clean the ID (strip # if user pasted it)
+  cleanId = cleanId.trim();
+  if (cleanId.startsWith("#")) {
+    cleanId = cleanId.substring(1);
+  }
+  cleanId = cleanId.trim();
+  
+  // Use a case-insensitive find
+  const listing = await Listing.findOne({ 
+    propertyId: { $regex: new RegExp(`^${cleanId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") } 
+  });
+  
+  if (!listing) {
+    throw new AppError("No property found with that ID", 404);
   }
 
   res.status(200).json({
@@ -294,10 +447,13 @@ export const deleteListing = catchAsync(async (req: Request, res: Response) => {
     throw new AppError("Listing not found", 404);
   }
 
-  // 4. Ownership check — only the user who created it can delete it
-  if (listing.user.toString() !== user._id.toString()) {
+  // 4. Ownership check — only the user who created it or an Admin can delete it
+  if (user.role !== "admin" && listing.user.toString() !== user._id.toString()) {
     throw new AppError("You are not authorized to delete this listing", 403);
   }
+
+  const ownerId = listing.user;
+  const listingTitle = listing.title;
 
   // 5. Delete it
   await listing.deleteOne();
@@ -307,6 +463,22 @@ export const deleteListing = catchAsync(async (req: Request, res: Response) => {
     message: "Listing deleted successfully",
     data: {},
   });
+
+  // 6. Notify owner IF deleted by Admin
+  if (user.role === "admin") {
+    try {
+      await Notification.create({
+        recipient: ownerId,
+        sender: user._id,
+        type: NotificationType.LISTING_REJECTED, // Use REJECTED as it represents the same 'gone' status
+        title: "Listing Removed by Admin",
+        message: `Your listing "${listingTitle}" has been removed by the administration for violating platform policies.`,
+        link: `/dashboard/my-properties`,
+      });
+    } catch (error) {
+      console.error("Failed to notify owner of administrative deletion:", error);
+    }
+  }
 });
 
 /**

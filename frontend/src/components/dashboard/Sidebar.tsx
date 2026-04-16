@@ -18,6 +18,7 @@ import {
   Settings as SettingsIcon,
   MessageSquare,
   ShieldCheck,
+  Flag,
 } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 
@@ -57,6 +58,7 @@ const navItems: NavItem[] = [
       { id: "order-history", label: "Order History", icon: ClipboardList },
     ],
   },
+  { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -70,6 +72,7 @@ const adminNavItems: NavItem[] = [
       { id: "admin/users", label: "Users", icon: ShieldCheck },
       { id: "admin/orders", label: "Shop Orders", icon: ShoppingCart },
       { id: "admin/inquiries", label: "Inquiries", icon: MessageSquare },
+      { id: "admin/reports", label: "Reporting", icon: Flag },
       { id: "admin/config", label: "Configuration", icon: SettingsIcon },
     ],
   },

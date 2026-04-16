@@ -28,18 +28,32 @@ export const protect = catchAsync(async (req: Request, res: Response, next: Next
   
   // 3. Optional but highly recommended: verify session still exists in Redis
   if (decoded.sessionId) {
-    const sessionData = await redisClient.get(`session:${decoded.id.toString()}:${decoded.sessionId}`);
-    if (!sessionData) {
-      return next(new AppError("Your session has expired. Please log in again.", 401));
+    try {
+      // Add a 5s timeout to Redis check to prevent hanging requests if Redis is slow/down
+      const sessionData = await Promise.race([
+        redisClient.get(`session:${decoded.id.toString()}:${decoded.sessionId}`),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error("Redis Timeout")), 5000)
+        )
+      ]);
+
+      if (!sessionData) {
+        return next(new AppError("Your session has expired. Please log in again.", 401));
+      }
+      
+      const parsedSession = JSON.parse(sessionData);
+      if (parsedSession.status === 'revoked') {
+        return next(new AppError("Your session has been revoked. Please log in again.", 401));
+      }
+      
+      // Attach current sessionId for controllers to know which device this request came from
+      (req as any).sessionId = decoded.sessionId;
+    } catch (redisError: any) {
+      console.error("[Auth Middleware] Session check failed/timed out:", redisError.message);
+      // Fail safely: if Redis is down, we don't let the request hang. 
+      // We assume the session is invalid for security if we can't verify it.
+      return next(new AppError("Unable to verify session. Please try again or re-login.", 401));
     }
-    
-    const parsedSession = JSON.parse(sessionData);
-    if (parsedSession.status === 'revoked') {
-      return next(new AppError("Your session has been revoked. Please log in again.", 401));
-    }
-    
-    // Attach current sessionId for controllers to know which device this request came from
-    (req as any).sessionId = decoded.sessionId;
   }
 
   // 4. Check if user still exists

@@ -5,6 +5,8 @@ import { AppError } from "../../shared/errors/AppError";
 import Inquiry from "./inquiry.model";
 import { createInquirySchema, updateInquiryStatusSchema, replyInquirySchema, updateInquiryPrioritySchema } from "./inquiry.validation";
 import { sendEmail } from "../../shared/utils/email";
+import User from "../user/user.model";
+import Notification, { NotificationType } from "../notification/notification.model";
 
 /**
  * @desc    Submit a new inquiry (Public)
@@ -23,6 +25,25 @@ export const createInquiry = catchAsync(async (req: Request, res: Response) => {
     message: "Inquiry submitted successfully",
     data: inquiry,
   });
+
+  // 3. Notify Admins about the new support inquiry
+  try {
+    const admins = await User.find({ role: "admin" }).select("_id");
+    
+    if (admins.length > 0) {
+      const notifications = admins.map(admin => ({
+        recipient: admin._id,
+        type: NotificationType.SYSTEM_ALERT,
+        title: "📬 New Support Inquiry",
+        message: `Support request from ${inquiry.senderName} (${inquiry.senderEmail}): "${inquiry.subject}"`,
+        link: `/dashboard/admin/inquiries`, // Admin inquiries management tab
+      }));
+
+      await Notification.insertMany(notifications);
+    }
+  } catch (error) {
+    console.error("Failed to notify admins of new inquiry:", error);
+  }
 });
 
 /**
@@ -216,12 +237,27 @@ export const replyToInquiry = catchAsync(async (req: Request, res: Response) => 
     inquiry.status = "in_progress";
   }
   
-  await inquiry.save();
-
   res.status(200).json({
     success: true,
     message: "Reply sent successfully",
   });
+
+  // 4. Notify the user in-app if they are a registered member
+  try {
+    const user = await User.findOne({ email: inquiry.senderEmail }).select("_id");
+    if (user) {
+      await Notification.create({
+        recipient: user._id,
+        sender: (req as any).user?._id,
+        type: NotificationType.SYSTEM_ALERT,
+        title: "💬 Response to your Inquiry",
+        message: `Admin has replied to your message: "${inquiry.subject}"`,
+        link: `/dashboard/notifications`, // Or a specific support view if available
+      });
+    }
+  } catch (error) {
+    console.error("Failed to notify user of support reply:", error);
+  }
 });
 
 /**

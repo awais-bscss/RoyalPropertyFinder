@@ -4,16 +4,17 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { Search, User, Menu, Plus, Home, ChevronRight, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/common/theme-toggle";
+
 import { Logo } from "@/components/common/Logo";
 import { LoginModal, SignUpModal } from "@/components/auth";
 import { ManageAlertsModal } from "@/components/user/ManageAlertsModal";
+import { NotificationDropdown } from "./NotificationDropdown";
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { logoutAuth } from "@/store/slices/authSlice";
 import { AuthService } from "@/services/auth.service";
-import { ListingInquiryService } from "@/services/listingInquiry.service";
+import apiClient from "@/lib/axios";
 import { toast } from "react-toastify";
 import {
   DropdownMenu,
@@ -28,7 +29,6 @@ export function Navbar() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isManageAlertsOpen, setIsManageAlertsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Redux Hook Setup
   const { user, isAuthenticated } = useSelector(
@@ -56,22 +56,6 @@ export function Navbar() {
   const router = useRouter();
   const currentTab = searchParams.get("tab");
 
-  const fetchUnreadCount = async () => {
-    if (isAuthenticated) {
-       try {
-          const res: any = await ListingInquiryService.getMyInquiries();
-          if (res.success) {
-             setUnreadCount(res.data.filter((i: any) => i.status === 'unread').length);
-          }
-       } catch (err) {
-          console.warn("Failed to fetch unread count", err);
-       }
-    }
-  };
-
-  useEffect(() => {
-    fetchUnreadCount();
-  }, [isAuthenticated]);
 
   const handleAddProperty = () => {
     if (isAuthenticated) {
@@ -96,83 +80,99 @@ export function Navbar() {
     },
   ];
 
+  const [propertySearchId, setPropertySearchId] = useState("");
+
+  const handlePropertyIdSearch = async (e?: React.KeyboardEvent | React.MouseEvent) => {
+    if (e && "key" in e && e.key !== "Enter") return;
+
+    // Clean input: remove #, "ID:", "ID " and trim
+    const cleanId = propertySearchId
+      .trim()
+      .replace(/^(ID[:\s]*|#)/i, "")
+      .trim();
+      
+    if (!cleanId) return;
+
+    try {
+      const resp: any = await apiClient.get(`/listings/search/${cleanId}`);
+      // Based on axios interceptor, resp is already response.data
+      if (resp?.success && resp?.data?._id) {
+        router.push(`/properties/${resp.data._id}`);
+        setPropertySearchId("");
+      } else {
+        toast.error("Property found but ID is missing.");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Property not found");
+    }
+  };
+
   return (
     <header className="w-full flex flex-col z-100">
       {/* Top Bar (Royal Blue) */}
       <div className="bg-royal-800 text-white h-11 text-xs">
         <div className="container mx-auto flex h-full items-center justify-between px-5">
           {/* Left Links */}
-          <div className="hidden md:flex items-center space-x-6 text-[14px] gap-3">
+          <div className="hidden md:flex items-center gap-6 text-[13px]">
             <Link
               href="/"
-              className="hover:text-white font-semibold flex items-center gap-1.5 transition-colors"
+              className="hover:text-royal-100 font-bold flex items-center gap-1.5 transition-colors uppercase tracking-tight"
             >
-              <Home className="w-4 h-4" /> PROPERTIES
+              <Home className="w-3.5 h-3.5" /> Properties
             </Link>
             <Link
               href="/plot-finder"
-              className="hover:text-white font-semibold transition-colors"
+              className="hover:text-royal-100 font-bold transition-colors uppercase tracking-tight"
             >
-              PLOT FINDER
+              Plot Finder
             </Link>
             <Link
               href="#"
-              className="hover:text-white font-semibold transition-colors"
+              className="hover:text-royal-100 font-bold transition-colors uppercase tracking-tight"
             >
-              BLOG
+              Blog
             </Link>
             <Link
               href="#"
-              className="hover:text-white font-semibold transition-colors"
+              className="hover:text-royal-100 font-bold transition-colors uppercase tracking-tight"
             >
-              MAPS
-            </Link>
-            <Link
-              href="#"
-              className="hover:text-white font-semibold transition-colors"
-            >
-              TOOLS
+              Tools
             </Link>
             <Link
               href="/contact"
-              className="hover:text-white font-semibold transition-colors"
+              className="hover:text-royal-100 font-bold transition-colors uppercase tracking-tight"
             >
-              CONTACT
+              Contact
             </Link>
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center space-x-4 ml-auto">
-            <div className="hidden lg:flex items-center bg-royal-800 rounded px-2.5 py-1 border border-[#F8F8F8] text-[#F8F8F8]">
+          <div className="flex items-center gap-4 ml-auto">
+            <div className="hidden lg:flex items-center bg-white/10 hover:bg-white/15 rounded px-3 py-1 border border-white/20 transition-colors group">
               <input
                 type="text"
                 placeholder="Property ID"
-                className="bg-transparent border-none text-[#F8F8F8] text-xs w-24 placeholder:text-[#F8F8F8] focus:outline-none"
+                value={propertySearchId}
+                onChange={(e) => setPropertySearchId(e.target.value)}
+                onKeyDown={handlePropertyIdSearch}
+                className="bg-transparent border-none text-white text-xs w-20 placeholder:text-white/60 focus:outline-none font-medium"
               />
-              <Search className="w-3 h-3 text-[#F8F8F8]" />
+              <Search 
+                className="w-3.5 h-3.5 text-white/80 cursor-pointer group-hover:text-white transition-colors" 
+                onClick={() => handlePropertyIdSearch()} 
+              />
             </div>
 
             <Button
               size="sm"
               onClick={handleAddProperty}
-              className="h-6 bg-white text-black hover:bg-royal-50 font-bold border-none rounded pointer-events-auto px-4 cursor-pointer"
+              className="h-6.5 bg-white text-royal-900 hover:bg-royal-50 font-bold border-none rounded pointer-events-auto px-4 cursor-pointer text-[12px] shadow-sm transition-all active:scale-95"
             >
               <Plus className="w-3 h-3 mr-1.5" /> Add Property
             </Button>
 
-            <div className="flex items-center space-x-8 border-l border-slate-200 pl-1 pr-2">
-              <ThemeToggle />
-
-              {isAuthenticated && (
-                 <Link href="/dashboard/inbox" className="relative p-1 text-white hover:text-royal-100 transition-colors">
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-royal-800">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                       </span>
-                    )}
-                 </Link>
-              )}
+            <div className={`flex items-center ${isAuthenticated ? "space-x-8 border-l border-slate-200 pl-1 pr-2" : "pl-6"}`}>
+              {isAuthenticated && <NotificationDropdown />}
 
               {isAuthenticated ? (
                 <DropdownMenu>
@@ -216,10 +216,10 @@ export function Navbar() {
               ) : (
                 <button
                   onClick={() => setIsLoginOpen(true)}
-                  aria-label="Login"
-                  className="cursor-pointer hover:text-white transition-colors -ml-1 text-[#F8F8F8]"
+                  className="flex items-center gap-2 text-[13px] font-bold text-white hover:text-royal-100 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  <User className="w-5 h-5" />
+                  <User className="w-4 h-4" />
+                  <span>LOGIN / SIGNUP</span>
                 </button>
               )}
             </div>
