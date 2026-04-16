@@ -1,6 +1,6 @@
 "use client";
 
-import { Bed, Bath, Move, Heart } from "lucide-react";
+import { Bed, Bath, Move, Heart, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -14,48 +14,6 @@ import { Button } from "@/components/ui/button";
 import apiClient from "@/lib/axios";
 import { formatPrice } from "@/lib/utils";
 
-const PROPERTIES = [
-  {
-    id: 1,
-    title: "Royal Residency Luxury Apartment",
-    price: "PKR 4.5 Crore",
-    location: "DHA Phase 6, Karachi",
-    beds: 3,
-    baths: 4,
-    area: "2400 Sq. Ft",
-    type: "Apartment",
-    status: "For Sale",
-    image:
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 2,
-    title: "Crystal Heights Villa",
-    price: "PKR 12.5 Crore",
-    location: "Bahria Town, Islamabad",
-    beds: 5,
-    baths: 6,
-    area: "500 Sq. Yd",
-    type: "House",
-    status: "Featured",
-    image:
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: 3,
-    title: "Golden Gate Commercial Plaza",
-    price: "PKR 25 Crore",
-    location: "Gulberg III, Lahore",
-    beds: 0,
-    baths: 2,
-    area: "10 Marla",
-    type: "Commercial",
-    status: "Hot Deal",
-    image:
-      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80",
-  },
-];
-
 export function FeaturedProperties() {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +24,7 @@ export function FeaturedProperties() {
         const response: any = await apiClient.get("/listings");
         setListings(response?.data || []);
       } catch (error) {
+        setListings([]);
         console.error("Failed to fetch listings:", error);
       } finally {
         setLoading(false);
@@ -74,9 +33,9 @@ export function FeaturedProperties() {
     fetchListings();
   }, []);
 
-  // Use real listings if we have them, otherwise use the placeholders
-  const displayProperties =
-    listings.length > 0 ? listings.slice(0, 3) : PROPERTIES;
+  const displayProperties = listings.slice(0, 3);
+
+  if (!loading && displayProperties.length === 0) return null;
 
   return (
     <section className="py-12 relative z-0">
@@ -94,7 +53,7 @@ export function FeaturedProperties() {
             href="/properties"
             className="hidden md:flex items-center text-[#023E8A] font-bold text-[15px] hover:text-[#023E8A]/80 cursor-pointer transition-colors"
           >
-            View All Properties →
+            View All <ChevronRight className="w-4 h-4 ml-1" />
           </Link>
         </div>
 
@@ -200,7 +159,7 @@ export function FeaturedProperties() {
         <div className="mt-12 text-center md:hidden">
           <Link href="/properties">
             <Button variant="outline" className="w-full">
-              View All Properties
+              View All <ChevronRight className="w-4 h-4 ml-1 inline" />
             </Button>
           </Link>
         </div>

@@ -3,7 +3,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { RefreshCcw, ShieldCheck } from "lucide-react";
+import { 
+  RefreshCcw, 
+  ShieldCheck, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  MoreVertical,
+  AlertTriangle,
+  User,
+  Calendar 
+} from "lucide-react";
 import apiClient from "@/lib/axios";
 import type {
   Listing,
@@ -14,6 +24,7 @@ import type {
   InquiryStats,
 } from "./types";
 import { InquiryService } from "@/services/inquiry.service";
+import { NotificationDropdown } from "../../layout/NotificationDropdown";
 
 // ── Shared context passed down to each page ───────────────────────────────────
 export interface AdminContext {
@@ -42,6 +53,7 @@ export interface AdminContext {
   navigateToListings: () => void;
   navigateToUsers: () => void;
   navigateToInquiries: () => void;
+  navigateToReports: () => void;
 
   inquiries: SupportInquiry[];
   inquiryStats: InquiryStats | null;
@@ -252,6 +264,7 @@ export function AdminPanel({ children }: Props) {
     navigateToListings: () => router.push("/dashboard/admin/listings"),
     navigateToUsers: () => router.push("/dashboard/admin/users"),
     navigateToInquiries: () => router.push("/dashboard/admin/inquiries"),
+    navigateToReports: () => router.push("/dashboard/admin/reports"),
 
     inquiries,
     inquiryStats,
@@ -271,13 +284,15 @@ export function AdminPanel({ children }: Props) {
             Manage listings, users and platform settings
           </p>
         </div>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[13px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <RefreshCcw className="w-4 h-4" />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[13px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <RefreshCcw className="w-4 h-4" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Page content */}

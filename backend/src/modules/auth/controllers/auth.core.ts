@@ -57,6 +57,44 @@ export const register = catchAsync(async (req: Request, res: Response) => {
     </div>
   `;
 
+  // 3. Create Notifications
+  try {
+    const adminUsers = await User.find({ role: "admin" }).select("_id");
+    
+    const registrationNotifications = [];
+
+    // Notify ALL admins
+    if (adminUsers.length > 0) {
+      adminUsers.forEach(admin => {
+        registrationNotifications.push({
+          recipient: admin._id,
+          sender: user._id,
+          type: "system_alert",
+          title: "🎉 New User Registered",
+          message: `${user.name} (${user.email}) has just joined Royal Property Finder.`,
+          link: `/dashboard/admin/users`,
+        });
+      });
+    }
+
+    // Welcome notification for the NEW user
+    registrationNotifications.push({
+      recipient: user._id,
+      type: "system_alert",
+      title: "🏘️ Welcome to Royal Property!",
+      message: `Hi ${user.name.split(" ")[0]}! We're glad to have you. Verify your email to start listing properties.`,
+      link: `/dashboard/settings`,
+    });
+
+    // We can't import local models here easily without potentially breaking paths, 
+    // but we can use the dynamic import or the mongoose model name.
+    const Notification = (await import("../../notification/notification.model")).default;
+    await Notification.insertMany(registrationNotifications);
+    
+  } catch (err) {
+    console.error("REGISTRATION NOTIFICATION ERROR:", err);
+  }
+
   if (isDev) console.log(`EMAIL VERIFICATION LINK (DEV): ${verifyURL}`);
 
   try {

@@ -6,6 +6,7 @@ import Listing from "../listing/listing.model";
 import { sendEmail } from "../../shared/utils/email";
 import path from "path";
 import User from "../user/user.model";
+import Notification, { NotificationType } from "../notification/notification.model";
 
 /**
  * @desc    Submit an inquiry for a property listing
@@ -37,6 +38,39 @@ export const createInquiry = catchAsync(async (req: Request, res: Response) => {
     message: "Inquiry sent successfully to the property owner.",
     data: inquiry,
   });
+
+  // 3. Notify the property owner (Seller) and Admins (for oversight)
+  try {
+    const ownerNotification = {
+      recipient: listing.user,
+      type: NotificationType.NEW_INQUIRY,
+      title: "New Property Inquiry",
+      message: `${name} has sent an inquiry about your property: "${listing.title}".`,
+      link: `/dashboard/inbox`,
+    };
+
+    // Find all admins
+    const admins = await User.find({ role: "admin" }).select("_id");
+    
+    const allNotifications: any[] = [ownerNotification];
+    
+    if (admins.length > 0) {
+      admins.forEach((admin: any) => {
+        allNotifications.push({
+          recipient: admin._id,
+          type: NotificationType.NEW_INQUIRY,
+          title: "📢 Global Inquiry Activity",
+          message: `New inquiry by ${name} for property: "${listing.title}".`,
+          link: `/dashboard/admin/inquiries`,
+        });
+      });
+    }
+
+    await Notification.insertMany(allNotifications);
+
+  } catch (error) {
+    console.error("Failed to process inquiry notifications:", error);
+  }
 });
 
 /**
@@ -243,6 +277,23 @@ export const replyToPropertyInquiry = catchAsync(async (req: Request, res: Respo
     message: "Reply sent successfully",
     data: inquiry,
   });
+
+  // 6. Notify the buyer (sender) in-app if they are a registered user
+  try {
+    const buyer = await User.findOne({ email: inquiry.senderEmail }).select("_id");
+    if (buyer) {
+      await Notification.create({
+        recipient: buyer._id,
+        sender: user._id,
+        type: NotificationType.INQUIRY_REPLIED,
+        title: "New Message from Owner",
+        message: `The owner/agent has replied to your inquiry about: "${(inquiry.listing as any).title}".`,
+        link: `/dashboard/inbox`,
+      });
+    }
+  } catch (error) {
+    console.error("Failed to send buyer in-app notification for reply:", error);
+  }
 });
 
 /**

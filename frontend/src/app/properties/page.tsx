@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -20,58 +20,7 @@ import { FilterSelect } from "@/components/features/new-projects/FilterSelect";
 import bgImage from "@/assets/bg-new-projects-sm.webp";
 import apiClient from "@/lib/axios";
 import { formatPrice } from "@/lib/utils";
-
-// Static dummy properties (fallback while loading or if no data)
-const PROPERTIES = [
-  {
-    id: "dummy1",
-    title: "Royal Residency Luxury Apartment",
-    price: "PKR 4.5 Crore",
-    location: "DHA Phase 6",
-    city: "Karachi",
-    beds: 3,
-    baths: 4,
-    area: "2400 Sq. Ft",
-    type: "Sell",
-    subtype: "Apartment",
-    status: "approved",
-    images: [
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80",
-    ],
-  },
-  {
-    id: "dummy2",
-    title: "Crystal Heights Villa",
-    price: "PKR 12.5 Crore",
-    location: "Bahria Town",
-    city: "Islamabad",
-    beds: 5,
-    baths: 6,
-    area: "500 Sq. Yd",
-    type: "Rent",
-    subtype: "House",
-    status: "approved",
-    images: [
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80",
-    ],
-  },
-  {
-    id: "dummy3",
-    title: "Golden Gate Commercial Plaza",
-    price: "PKR 25 Crore",
-    location: "Gulberg III",
-    city: "Lahore",
-    beds: 0,
-    baths: 2,
-    area: "10 Marla",
-    type: "Sell",
-    subtype: "Commercial",
-    status: "approved",
-    images: [
-      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80",
-    ],
-  },
-];
+import { useSearchParams, useRouter } from "next/navigation";
 
 const BUDGET_OPTIONS = [
   { label: "0 – Any", value: "any" },
@@ -89,35 +38,125 @@ const AREA_OPTIONS = [
   { label: "2+ Kanal", value: "2kanal+" },
 ];
 
-export default function PropertiesPage() {
+function PropertiesContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters State
-  const [city, setCity] = useState("any");
-  const [purpose, setPurpose] = useState("any");
-  const [subtype, setSubtype] = useState("any");
-  const [budget, setBudget] = useState("any");
-  const [area, setArea] = useState("any");
-  const [keyword, setKeyword] = useState("");
+  // Filters State - Initialized from URL
+  const [city, setCity] = useState(searchParams.get("city") || "any");
+  const [purpose, setPurpose] = useState(searchParams.get("purpose") || "any");
+  const [subtype, setSubtype] = useState(searchParams.get("subtype") || "any");
+  const [category, setCategory] = useState(searchParams.get("category") || "any");
+  
+  // Specific Ranges (UI Dropdowns)
+  const [budget, setBudget] = useState(searchParams.get("budget") || "any");
+  const [area, setArea] = useState(searchParams.get("area") || "any");
+  
+  // Detailed Filter Stats (from Hero or refined search)
+  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
+  const [minArea, setMinArea] = useState(searchParams.get("minArea") || "");
+  const [maxArea, setMaxArea] = useState(searchParams.get("maxArea") || "");
+  const [bedrooms, setBedrooms] = useState(searchParams.get("bedrooms") || "any");
+  
+  const [keyword, setKeyword] = useState(searchParams.get("location") || searchParams.get("keyword") || "");
   const [showMore, setShowMore] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [searched, setSearched] = useState(
+    !!searchParams.get("city") || 
+    !!searchParams.get("location") || 
+    !!searchParams.get("keyword") || 
+    !!searchParams.get("purpose") || 
+    !!searchParams.get("budget") ||
+    !!searchParams.get("area")
+  );
+
+  const fetchListings = async (paramsObj?: any) => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams();
+      const p = paramsObj || { 
+        city, purpose, subtype, keyword, 
+        minPrice, maxPrice, minArea, maxArea, 
+        bedrooms, category, budget, area 
+      };
+      
+      if (p.city && p.city !== "any") q.set("city", p.city);
+      if (p.purpose && p.purpose !== "any") q.set("purpose", p.purpose);
+      if (p.subtype && p.subtype !== "any") q.set("subtype", p.subtype);
+      if (p.category && p.category !== "any") q.set("propertyTypeTab", p.category);
+      if (p.keyword) q.set("keyword", p.keyword);
+      
+      // Handle Bedooms
+      if (p.bedrooms && p.bedrooms !== "any" && p.bedrooms !== "All") q.set("bedrooms", p.bedrooms);
+
+      // Handle Budget Range Dropdowns
+      if (p.budget !== "any") {
+        if (p.budget === "1cr") q.set("maxPrice", "10000000");
+        else if (p.budget === "1-5cr") { q.set("minPrice", "10000000"); q.set("maxPrice", "50000000"); }
+        else if (p.budget === "5-20cr") { q.set("minPrice", "50000000"); q.set("maxPrice", "200000000"); }
+        else if (p.budget === "20cr+") q.set("minPrice", "200000000");
+      } else {
+        // Only use detailed if dropdown is not set
+        if (p.minPrice) q.set("minPrice", p.minPrice);
+        if (p.maxPrice && p.maxPrice !== "Any") q.set("maxPrice", p.maxPrice);
+      }
+
+      // Handle Area Range Dropdowns
+      if (p.area !== "any") {
+        // Backend handles numeric filtering, but area needs unit awareness usually. 
+        // For simplicity we map marla/kanal to ranges if that's what's in DB
+        if (p.area === "5marla") q.set("maxArea", "5");
+        else if (p.area === "5-10marla") { q.set("minArea", "5"); q.set("maxArea", "10"); }
+        else if (p.area === "1-2kanal") { q.set("minArea", "1"); q.set("maxArea", "2"); }
+        else if (p.area === "2kanal+") q.set("minArea", "2");
+      } else {
+        if (p.minArea) q.set("minArea", p.minArea);
+        if (p.maxArea && p.maxArea !== "Any") q.set("maxArea", p.maxArea);
+      }
+
+      const response: any = await apiClient.get(`/listings?${q.toString()}`);
+      setListings(response?.data || []);
+    } catch (error) {
+      setListings([]);
+      console.error("Failed to fetch listings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        const response: any = await apiClient.get("/listings");
-        const data = response?.data || [];
-        setListings(data.length > 0 ? data : PROPERTIES);
-      } catch (error) {
-        setListings(PROPERTIES);
-        console.error("Failed to fetch listings:", error);
-      } finally {
-        setLoading(false);
-      }
+    const currentParams = {
+      city: searchParams.get("city") || "any",
+      purpose: searchParams.get("purpose") || "any",
+      subtype: searchParams.get("subtype") || "any",
+      category: searchParams.get("category") || "any",
+      budget: searchParams.get("budget") || "any",
+      area: searchParams.get("area") || "any",
+      keyword: searchParams.get("location") || searchParams.get("keyword") || "",
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+      minArea: searchParams.get("minArea") || "",
+      maxArea: searchParams.get("maxArea") || "",
+      bedrooms: searchParams.get("bedrooms") || "any"
     };
-    fetchListings();
-  }, []);
+
+    setCity(currentParams.city);
+    setPurpose(currentParams.purpose);
+    setSubtype(currentParams.subtype);
+    setCategory(currentParams.category);
+    setBudget(currentParams.budget);
+    setArea(currentParams.area);
+    setKeyword(currentParams.keyword);
+    setMinPrice(currentParams.minPrice);
+    setMaxPrice(currentParams.maxPrice);
+    setMinArea(currentParams.minArea);
+    setMaxArea(currentParams.maxArea);
+    setBedrooms(currentParams.bedrooms);
+
+    fetchListings(currentParams);
+  }, [searchParams]);
 
   const cityOptions = [
     { label: "All Cities", value: "any" },
@@ -136,32 +175,46 @@ export default function PropertiesPage() {
   ];
 
   const filteredProperties = useMemo(() => {
-    if (!searched) return listings;
-    return listings.filter((prop) => {
-      const matchCity = city === "any" || prop.city === city;
-      const matchPurpose =
-        purpose === "any" || prop.purpose === purpose || prop.type === purpose;
-      const matchSubtype = subtype === "any" || prop.subtype === subtype;
-      const matchKeyword =
-        !keyword ||
-        prop.title?.toLowerCase().includes(keyword.toLowerCase()) ||
-        prop.location?.toLowerCase().includes(keyword.toLowerCase());
-      return matchCity && matchPurpose && matchSubtype && matchKeyword;
-    });
-  }, [searched, listings, city, purpose, subtype, keyword]);
+    return listings;
+  }, [listings]);
 
   function handleSearch() {
     setSearched(true);
+    const params = new URLSearchParams();
+    if (city !== "any") params.set("city", city);
+    if (purpose !== "any") params.set("purpose", purpose);
+    if (subtype !== "any") params.set("subtype", subtype);
+    if (category !== "any") params.set("category", category);
+    if (keyword) params.set("location", keyword);
+    if (budget !== "any") params.set("budget", budget);
+    if (area !== "any") params.set("area", area);
+    if (bedrooms !== "any" && bedrooms !== "All") params.set("bedrooms", bedrooms);
+    
+    // We don't necessarily need to put minPrice/maxArea in URL if dropdown is set, 
+    // but we can preserve them if they were already there
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice && maxPrice !== "Any") params.set("maxPrice", maxPrice);
+    if (minArea) params.set("minArea", minArea);
+    if (maxArea && maxArea !== "Any") params.set("maxArea", maxArea);
+
+    router.push(`/properties?${params.toString()}`);
   }
 
   function clearFilters() {
     setCity("any");
     setPurpose("any");
     setSubtype("any");
+    setCategory("any");
     setBudget("any");
     setArea("any");
     setKeyword("");
+    setMinPrice("");
+    setMaxPrice("");
+    setMinArea("");
+    setMaxArea("");
+    setBedrooms("any");
     setSearched(false);
+    router.push("/properties");
   }
 
   return (
@@ -275,9 +328,9 @@ export default function PropertiesPage() {
 
           {/* Row 2: Expanded filters - Animated */}
           <div
-            className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${showMore ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${showMore ? "grid-rows-[1fr]" : "grid-rows-[0fr] overflow-hidden"}`}
           >
-            <div className="overflow-hidden">
+            <div className={`${showMore ? "overflow-visible" : "overflow-hidden"}`}>
               <div className="mt-5 flex flex-wrap gap-x-8 gap-y-5 items-end border-t border-slate-100 dark:border-slate-800 pt-5">
                 {/* Area */}
                 <FilterSelect
@@ -489,5 +542,17 @@ export default function PropertiesPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={
+       <div className="flex items-center justify-center min-h-screen">
+         <div className="w-10 h-10 border-4 border-royal-500 border-t-transparent rounded-full animate-spin"></div>
+       </div>
+    }>
+      <PropertiesContent />
+    </Suspense>
   );
 }

@@ -57,6 +57,10 @@ const PropertyDisplayMap = dynamic(() => import("@/components/features/propertie
   loading: () => <div className="h-[400px] w-full bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400">Loading Map...</div>
 });
 
+import { ReportListingModal } from "@/components/features/properties/ReportListingModal";
+import { SafetyTipsModal } from "@/components/features/properties/SafetyTipsModal";
+import { Flag, ShieldCheck } from "lucide-react";
+
 
 export default function PropertyDetailsPage() {
   const params = useParams();
@@ -67,6 +71,8 @@ export default function PropertyDetailsPage() {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [isAmenitiesExpanded, setIsAmenitiesExpanded] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   // Inquiry Form State
@@ -168,6 +174,10 @@ export default function PropertyDetailsPage() {
             <span className="text-slate-900 dark:text-slate-200 font-medium truncate max-w-[200px]">{listing.title}</span>
           </nav>
           <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center bg-royal-50 dark:bg-royal-950/40 px-3 py-1.5 rounded-sm border border-royal-100 dark:border-royal-900/30">
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2 border-r border-slate-200 dark:border-slate-800 pr-2">Listing ID</span>
+               <span className="text-[12px] font-black text-royal-600 dark:text-royal-400 tracking-wider">#{listing.propertyId || "N/A"}</span>
+            </div>
             <Button variant="outline" size="sm" className="gap-2 text-[13px] font-semibold border-slate-200">
               <Share2 size={16} /> Share
             </Button>
@@ -608,7 +618,7 @@ export default function PropertyDetailsPage() {
                    </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 text-white overflow-hidden relative group cursor-pointer">
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 text-white overflow-hidden relative group">
                    <div className="relative z-10">
                       <h4 className="font-black text-xl mb-2 flex items-center gap-2">
                         <Clock className="text-[#48CAE4]" /> Avoid Fraud
@@ -616,9 +626,20 @@ export default function PropertyDetailsPage() {
                       <p className="text-slate-400 text-sm leading-relaxed mb-4">
                         Never pay advance for inspection. Report any suspicious agent immediately to our support team.
                       </p>
-                      <button className="text-[#48CAE4] font-bold text-sm uppercase tracking-wider flex items-center gap-1 hover:gap-2 transition-all">
-                        Safety Tips <ChevronRight size={16} />
-                      </button>
+                      <div className="flex flex-col gap-3">
+                        <button 
+                          onClick={() => setIsSafetyModalOpen(true)}
+                          className="text-[#48CAE4] font-bold text-sm uppercase tracking-wider flex items-center gap-1 hover:gap-2 transition-all cursor-pointer"
+                        >
+                          Safety Tips <ChevronRight size={16} />
+                        </button>
+                        <button 
+                          onClick={() => setIsReportModalOpen(true)}
+                          className="flex items-center gap-2 text-rose-400 hover:text-rose-500 font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
+                        >
+                          <Flag size={14} /> Report this Listing
+                        </button>
+                      </div>
                    </div>
                    <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-[#48CAE4]/10 rounded-full blur-2xl group-hover:bg-[#48CAE4]/20 transition-all"></div>
                 </div>
@@ -628,6 +649,18 @@ export default function PropertyDetailsPage() {
       </main>
 
       <Footer />
+
+      <ReportListingModal 
+        listingId={listing._id}
+        listingTitle={listing.title}
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+      />
+
+      <SafetyTipsModal 
+        isOpen={isSafetyModalOpen}
+        onClose={() => setIsSafetyModalOpen(false)}
+      />
 
       {/* Fullscreen Photo Gallery Modal */}
       {isGalleryOpen && (

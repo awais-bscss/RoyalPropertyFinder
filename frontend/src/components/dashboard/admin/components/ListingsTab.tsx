@@ -185,6 +185,11 @@ export function ListingsTab({
                               <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
                               {listing.city}, {listing.province}
                             </p>
+                            <div className="mt-1">
+                              <span className="text-[10px] font-black text-royal-600 bg-royal-50 dark:bg-royal-950/40 px-1.5 py-0.5 rounded-sm border border-royal-100 dark:border-royal-900/30 uppercase tracking-tight">
+                                ID: {listing.propertyId || "N/A"}
+                              </span>
+                            </div>
                             {/* Mobile-only status badge */}
                             <span className={`lg:hidden inline-flex items-center gap-1 mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${sc.cls}`}>
                               <sc.icon className="w-2.5 h-2.5" />

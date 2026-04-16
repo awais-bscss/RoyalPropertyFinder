@@ -19,10 +19,20 @@ const BED_OPTIONS = [
   "10+",
 ];
 
-export function BedsDropdown() {
+export function BedsDropdown({
+  onBedsChange,
+}: {
+  onBedsChange?: (beds: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [selectedBeds, setSelectedBeds] = useState("All");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (onBedsChange) {
+      onBedsChange(selectedBeds);
+    }
+  }, [selectedBeds, onBedsChange]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

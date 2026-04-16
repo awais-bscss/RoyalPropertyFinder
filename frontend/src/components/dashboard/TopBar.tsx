@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { NotificationDropdown } from "../layout/NotificationDropdown";
 import { usePathname, useRouter } from "next/navigation";
 
 interface TopBarProps {
@@ -61,10 +62,10 @@ export function TopBar({ setSidebarOpen, handleLogout, user }: TopBarProps) {
           <Home className="w-4 h-4" /> Home
         </Link>
 
-        <button className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-500">
-          <Bell className="w-[18px] h-[18px]" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-        </button>
+        {/* Use the new notification dropdown instead of the static bell icon */}
+        <div className="text-slate-500 dark:text-slate-400">
+           <NotificationDropdown isDashboard />
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
